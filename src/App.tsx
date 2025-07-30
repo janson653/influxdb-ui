@@ -340,7 +340,7 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {mainContentArea.bottom_panel.results_table.rows.map((row, rowIndex) => (
+                {mainContentArea.bottom_panel.results_table.rows.map((row: Record<string, any>, rowIndex) => (
                   <tr key={rowIndex} style={{ backgroundColor: mainContentArea.bottom_panel.results_table.row_background_color, color: mainContentArea.bottom_panel.results_table.row_text_color }}>
                     {mainContentArea.bottom_panel.results_table.columns.map((column, colIndex) => (
                       <td key={colIndex}>{row[column]}</td>
