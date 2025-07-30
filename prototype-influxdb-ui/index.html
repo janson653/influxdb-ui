@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InfluxDB UI - Database Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Left Sidebar -->
+        <aside class="left-sidebar">
+            <header class="sidebar-header">
+                <h2>数据库工具</h2>
+                <div class="search-container">
+                    <input type="text" placeholder="Search database objects..." class="search-input" id="searchInput">
+                </div>
+            </header>
+            
+            <nav class="connections-list">
+                <div class="connection-item">
+                    <div class="connection-header" onclick="toggleConnection(this)">
+                        <span class="connection-status connected" title="已连接"></span>
+                        <span class="connection-name">InfluxDB连接1</span>
+                        <span class="connection-toggle">▼</span>
+                    </div>
+                    <div class="databases-list">
+                        <div class="database-item">
+                            <span class="database-name">production_db</span>
+                        </div>
+                        <div class="database-item expanded">
+                            <span class="database-name" onclick="toggleDatabase(this)">customer_data</span>
+                            <div class="tables-list">
+                                <div class="table-item" onclick="selectTable('customers')">customers</div>
+                                <div class="table-item" onclick="selectTable('orders')">orders</div>
+                                <div class="table-item" onclick="selectTable('products')">products</div>
+                            </div>
+                        </div>
+                        <div class="database-item">
+                            <span class="database-name">Sales_summary</span>
+                        </div>
+                        <div class="database-item">
+                            <span class="database-name">analytics_db</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="connection-item">
+                    <div class="connection-header" onclick="toggleConnection(this)">
+                        <span class="connection-status connected" title="已连接"></span>
+                        <span class="connection-name">InfluxDB连接2</span>
+                        <span class="connection-toggle">▼</span>
+                    </div>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Panel -->
+            <section class="top-panel">
+                <div class="toolbar">
+                    <button class="btn btn-primary" onclick="showNewConnectionDialog()">新建连接</button>
+                    <button class="btn btn-secondary" onclick="saveQuery()">保存</button>
+                    <button class="btn btn-success" onclick="executeQuery()">运行 SQL</button>
+                </div>
+                
+                <div class="query-tabs">
+                    <div class="tab active" onclick="switchTab(this, 'query1')">查询 1</div>
+                    <div class="tab" onclick="switchTab(this, 'query2')">查询 2</div>
+                    <button class="tab-add" onclick="addNewTab()">+</button>
+                </div>
+                
+                <div class="query-editor">
+                    <textarea class="sql-editor" id="sqlEditor" placeholder="输入SQL查询语句...">SELECT * FROM customers
+WHERE city = '北京'
+AND created_at = '2023-01-01'
+ORDER BY last_order_date DESC;
+
+SELECT COUNT(*) AS total_customers
+FROM customers WHERE city = '北京';</textarea>
+                </div>
+            </section>
+
+            <!-- Bottom Panel -->
+            <section class="bottom-panel">
+                <div class="result-tabs">
+                    <div class="tab active" onclick="switchResultTab(this, 'results')">结果</div>
+                    <div class="tab" onclick="switchResultTab(this, 'messages')">消息</div>
+                </div>
+                
+                <div class="results-container">
+                    <div class="results-header">
+                        <span class="results-info">结果 (5 条记录, 执行时间: 0.012 秒)</span>
+                        <div class="action-buttons">
+                            <button class="btn btn-small" onclick="exportToCSV()">导出 CSV</button>
+                            <button class="btn btn-small" onclick="refreshResults()">刷新</button>
+                        </div>
+                    </div>
+                    
+                    <div class="results-table-container">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>姓名</th>
+                                    <th>城市</th>
+                                    <th>电话</th>
+                                    <th>邮箱</th>
+                                    <th>注册日期</th>
+                                    <th>最近订单日期</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1001</td>
+                                    <td>张明</td>
+                                    <td>北京</td>
+                                    <td>138****5678</td>
+                                    <td>zhang@example.com</td>
+                                    <td>2022-12-12</td>
+                                    <td>2023-11-05</td>
+                                </tr>
+                                <tr>
+                                    <td>1002</td>
+                                    <td>李华</td>
+                                    <td>北京</td>
+                                    <td>139****1234</td>
+                                    <td>li@example.com</td>
+                                    <td>2023-01-23</td>
+                                    <td>2023-10-18</td>
+                                </tr>
+                                <tr>
+                                    <td>1003</td>
+                                    <td>王芳</td>
+                                    <td>北京</td>
+                                    <td>136****2345</td>
+                                    <td>wang@example.com</td>
+                                    <td>2023-02-15</td>
+                                    <td>2023-09-22</td>
+                                </tr>
+                                <tr>
+                                    <td>1004</td>
+                                    <td>赵伟</td>
+                                    <td>北京</td>
+                                    <td>135****6789</td>
+                                    <td>zhao@example.com</td>
+                                    <td>2023-03-08</td>
+                                    <td>2023-08-17</td>
+                                </tr>
+                                <tr>
+                                    <td>1005</td>
+                                    <td>刘强</td>
+                                    <td>北京</td>
+                                    <td>137****3456</td>
+                                    <td>liu@example.com</td>
+                                    <td>2023-04-19</td>
+                                    <td>2023-07-30</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Right Sidebar -->
+        <aside class="right-sidebar">
+            <div class="table-properties">
+                <h3 id="tableName">customers表</h3>
+                
+                <div class="property-section">
+                    <h4>列名</h4>
+                    <div class="columns-list">
+                        <div class="column-item">
+                            <span class="column-name">id</span>
+                            <span class="column-type">INT</span>
+                        </div>
+                        <div class="column-item">
+                            <span class="column-name">name</span>
+                            <span class="column-type">VARCHAR(50)</span>
+                        </div>
+                        <div class="column-item">
+                            <span class="column-name">city</span>
+                            <span class="column-type">VARCHAR(50)</span>
+                        </div>
+                        <div class="column-item">
+                            <span class="column-name">phone</span>
+                            <span class="column-type">VARCHAR(20)</span>
+                        </div>
+                        <div class="column-item">
+                            <span class="column-name">email</span>
+                            <span class="column-type">VARCHAR(100)</span>
+                        </div>
+                        <div class="column-item">
+                            <span class="column-name">created_at</span>
+                            <span class="column-type">DATETIME</span>
+                        </div>
+                        <div class="column-item">
+                            <span class="column-name">last_order_date</span>
+                            <span class="column-type">DATETIME</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- JavaScript for interactivity -->
+    <script>
+        // 切换连接展开/收起
+        function toggleConnection(element) {
+            const databasesList = element.nextElementSibling;
+            const toggle = element.querySelector('.connection-toggle');
+            
+            if (databasesList.style.display === 'none') {
+                databasesList.style.display = 'block';
+                toggle.textContent = '▼';
+            } else {
+                databasesList.style.display = 'none';
+                toggle.textContent = '▶';
+            }
+        }
+
+        // 切换数据库展开/收起
+        function toggleDatabase(element) {
+            const tablesList = element.nextElementSibling;
+            const parent = element.parentElement;
+            
+            if (parent.classList.contains('expanded')) {
+                parent.classList.remove('expanded');
+                tablesList.style.display = 'none';
+            } else {
+                parent.classList.add('expanded');
+                tablesList.style.display = 'block';
+            }
+        }
+
+        // 选择表
+        function selectTable(tableName) {
+            // 移除所有选中状态
+            document.querySelectorAll('.table-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // 添加选中状态
+            event.target.classList.add('selected');
+            
+            // 更新右侧面板
+            document.getElementById('tableName').textContent = tableName + '表';
+            
+            // 这里可以添加加载表详情的逻辑
+            console.log('Selected table:', tableName);
+        }
+
+        // 切换查询标签页
+        function switchTab(element, tabId) {
+            // 移除所有活动状态
+            document.querySelectorAll('.query-tabs .tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 添加活动状态
+            element.classList.add('active');
+            
+            // 这里可以添加切换查询内容的逻辑
+            console.log('Switched to tab:', tabId);
+        }
+
+        // 切换结果标签页
+        function switchResultTab(element, tabId) {
+            // 移除所有活动状态
+            document.querySelectorAll('.result-tabs .tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 添加活动状态
+            element.classList.add('active');
+            
+            // 这里可以添加切换结果内容的逻辑
+            console.log('Switched to result tab:', tabId);
+        }
+
+        // 添加新标签页
+        function addNewTab() {
+            const tabsContainer = document.querySelector('.query-tabs');
+            const newTab = document.createElement('div');
+            newTab.className = 'tab';
+            newTab.textContent = '查询 ' + (document.querySelectorAll('.query-tabs .tab').length + 1);
+            newTab.onclick = function() { switchTab(this, 'query' + (document.querySelectorAll('.query-tabs .tab').length + 1)); };
+            
+            tabsContainer.insertBefore(newTab, document.querySelector('.tab-add'));
+        }
+
+        // 执行查询
+        function executeQuery() {
+            const query = document.getElementById('sqlEditor').value;
+            console.log('Executing query:', query);
+            
+            // 这里可以添加实际的查询执行逻辑
+            alert('查询执行中...');
+        }
+
+        // 保存查询
+        function saveQuery() {
+            const query = document.getElementById('sqlEditor').value;
+            console.log('Saving query:', query);
+            
+            // 这里可以添加保存逻辑
+            alert('查询已保存');
+        }
+
+        // 导出CSV
+        function exportToCSV() {
+            console.log('Exporting to CSV...');
+            alert('导出CSV功能');
+        }
+
+        // 刷新结果
+        function refreshResults() {
+            console.log('Refreshing results...');
+            alert('刷新结果');
+        }
+
+        // 显示新建连接对话框
+        function showNewConnectionDialog() {
+            console.log('Showing new connection dialog...');
+            alert('新建连接功能');
+        }
+
+        // 搜索功能
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            console.log('Searching for:', searchTerm);
+            
+            // 这里可以添加搜索逻辑
+        });
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('InfluxDB UI initialized');
+        });
+    </script>
+</body>
+</html>
