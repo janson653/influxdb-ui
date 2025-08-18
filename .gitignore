@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+# START Ruler Generated Files
+*.bak
+.gemini/settings.json
+.gemini/settings.json.bak
+.kilocode/mcp.json
+.kilocode/mcp.json.bak
+.kiro/steering/airules.md
+.kiro/steering/airules.md.bak
+.mcp.json
+.mcp.json.bak
+CLAUDE.md
+CLAUDE.md.bak
+GEMINI.md
+GEMINI.md.bak
+# END Ruler Generated Files

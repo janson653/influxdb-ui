@@ -1,0 +1,15 @@
+.query-panel-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.query-panel-tabs {
+  background-color: #e0e0e0;
+}
+
+.query-panel-tab-content {
+  padding: 1rem;
+  flex-grow: 1;
+  overflow-y: auto;
+}

@@ -1,0 +1,41 @@
+.connection-list-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.connection-list-header {
+  padding: 1rem;
+  border-bottom: 1px solid #3f4448;
+}
+
+.connection-list-search {
+  width: 100%;
+}
+
+.connection-list {
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+.connection-list-item {
+  padding: 1rem;
+  border-bottom: 1px solid #3f4448;
+  cursor: pointer;
+}
+
+.connection-list-item:hover {
+  background-color: #3f4448;
+}
+
+.connection-list-item.active {
+  background-color: #0366d6;
+}
+
+.connection-list-item-name {
+  font-weight: bold;
+}
+
+.connection-list-item-status {
+  margin-left: 0.5rem;
+}
