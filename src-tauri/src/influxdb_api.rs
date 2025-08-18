@@ -50,21 +50,43 @@ pub async fn query_data(
     query_string: String,
     influxdb_url: String,
     influxdb_database: String,
+    username: Option<String>,
+    password: Option<String>,
 ) -> Result<String, String> {
-    let client = Client::new(influxdb_url, influxdb_database);
-
+    println!("🔍 [Rust] 执行查询:");
+    println!("  URL: {}", influxdb_url);
+    println!("  Database: {}", influxdb_database);
+    println!("  Query: {}", query_string);
+    println!("  Username: {:?}", username);
+    
+    let mut client = Client::new(influxdb_url, influxdb_database);
+    
+    if let (Some(u), Some(p)) = (username, password) {
+        println!("🔐 [Rust] 使用认证: {}", u);
+        client = client.with_auth(u, p);
+    }
+    
     let query = ReadQuery::new(query_string);
 
     match client.json_query(query).await {
         Ok(json) => {
+            println!("✅ [Rust] 查询执行成功");
             let result: Result<Vec<Series>, _> = serde_json::from_value(serde_json::to_value(json.results).unwrap());
             match result {
                 Ok(series) => {
-                    Ok(serde_json::to_string(&series).unwrap_or_else(|e| format!("Failed to serialize JSON: {}", e)))
+                    let json_str = serde_json::to_string(&series).unwrap_or_else(|e| format!("Failed to serialize JSON: {}", e));
+                    println!("📄 [Rust] 返回数据长度: {}", json_str.len());
+                    Ok(json_str)
                 },
-                Err(e) => Err(format!("Failed to deserialize JSON: {}", e)),
+                Err(e) => {
+                    println!("❌ [Rust] JSON 反序列化失败: {}", e);
+                    Err(format!("Failed to deserialize JSON: {}", e))
+                },
             }
         },
-        Err(e) => Err(format!("Failed to query data: {}", e)),
+        Err(e) => {
+            println!("❌ [Rust] 查询执行失败: {}", e);
+            Err(format!("Failed to query data: {}", e))
+        }
     }
 }

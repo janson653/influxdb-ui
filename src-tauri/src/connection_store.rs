@@ -97,13 +97,29 @@ pub async fn test_connection_with_auth(
 ) -> Result<bool, String> {
     use influxdb::Client;
     
+    println!("🔧 [Rust] 开始测试连接:");
+    println!("  URL: {}", url);
+    println!("  Database: {}", database);
+    println!("  Username: {:?}", username);
+    println!("  Has Password: {}", password.is_some());
+    
     let mut client = Client::new(&url, &database);
     
     if let (Some(u), Some(p)) = (username, password) {
+        println!("🔐 [Rust] 添加认证信息: {}", u);
         client = client.with_auth(u, p);
     }
     
-    client.ping().await
-        .map(|_| true)
-        .map_err(|e| e.to_string())
+    println!("🏓 [Rust] 发送 ping 请求...");
+    match client.ping().await {
+        Ok(_) => {
+            println!("✅ [Rust] 连接测试成功");
+            Ok(true)
+        }
+        Err(e) => {
+            println!("❌ [Rust] 连接测试失败: {}", e);
+            println!("❌ [Rust] 错误类型: {:?}", std::mem::discriminant(&e));
+            Err(format!("连接失败: {}", e))
+        }
+    }
 }

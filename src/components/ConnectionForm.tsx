@@ -12,7 +12,7 @@ interface ConnectionFormProps {
 const ConnectionForm: React.FC<ConnectionFormProps> = ({ onConnectionCreated, onCancel }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [useAuth, setUseAuth] = useState(false);
+  const [useAuth, setUseAuth] = useState(true);
 
   const handleSubmit = async (values: any) => {
     setLoading(true);
@@ -37,10 +37,11 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ onConnectionCreated, on
       } else {
         connection.status = 'error';
         connection.error = '连接失败，请检查配置';
-        message.error('连接失败，请检查配置');
+        message.error('连接失败，请检查服务器地址、认证信息和数据库名称');
       }
     } catch (error) {
-      message.error('连接测试失败');
+      const errorMessage = error instanceof Error ? error.message : '连接测试失败';
+      message.error(`连接测试失败: ${errorMessage}`);
       console.error('连接错误:', error);
     } finally {
       setLoading(false);
@@ -55,7 +56,9 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ onConnectionCreated, on
         onFinish={handleSubmit}
         initialValues={{
           url: 'http://localhost:8086',
-          database: 'test'
+          database: 'test',
+          username: 'admin',
+          password: 'password'
         }}
       >
         <Form.Item
@@ -82,8 +85,16 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ onConnectionCreated, on
           <Input placeholder="test" prefix={<DatabaseOutlined />} />
         </Form.Item>
 
-        <Form.Item label="启用认证">
-          <Switch checked={useAuth} onChange={setUseAuth} />
+        <Form.Item 
+          label="数据库认证"
+          help="如果数据库需要用户名密码认证，请启用此项"
+        >
+          <Switch 
+            checked={useAuth} 
+            onChange={setUseAuth}
+            checkedChildren="需要认证"
+            unCheckedChildren="无需认证"
+          />
         </Form.Item>
 
         {useAuth && (
@@ -93,7 +104,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ onConnectionCreated, on
               label="用户名"
               rules={[{ required: true, message: '请输入用户名' }]}
             >
-              <Input placeholder="admin" />
+              <Input placeholder="请输入用户名" prefix={<DatabaseOutlined />} />
             </Form.Item>
 
             <Form.Item
@@ -101,7 +112,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ onConnectionCreated, on
               label="密码"
               rules={[{ required: true, message: '请输入密码' }]}
             >
-              <Input.Password placeholder="password" />
+              <Input.Password placeholder="请输入密码" />
             </Form.Item>
           </>
         )}
