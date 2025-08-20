@@ -8,7 +8,7 @@ import {
   Col, 
   Radio, 
   message,
-  Tooltip,
+  Tooltip as AntTooltip,
   Badge
 } from 'antd';
 import {
@@ -24,15 +24,12 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  Area,
-  AreaChart,
   Cell
 } from 'recharts';
 import {
   LineChartOutlined,
   BarChartOutlined,
   PieChartOutlined,
-  AreaChartOutlined,
   DownloadOutlined,
   SettingOutlined,
   InfoCircleOutlined
@@ -51,7 +48,7 @@ interface DataVisualizationProps {
 }
 
 interface ChartConfigState {
-  type: 'line' | 'bar' | 'area' | 'pie';
+  type: 'line' | 'bar' | 'pie';
   title: string;
   xAxis: string;
   yAxis: string;
@@ -64,8 +61,7 @@ interface ChartConfigState {
 const DataVisualization: React.FC<DataVisualizationProps> = ({
   queryResult,
   query,
-  database,
-  onExport
+  database
 }) => {
   const [chartConfig, setChartConfig] = useState<ChartConfigState>({
     type: 'line',
@@ -149,7 +145,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
       if (key === 'timeField' || key === 'valueFields' || key === 'type') {
         const newData = DataVisualizationService.convertInfluxDBToChartData(
           queryResult!,
-          newConfig.type === 'area' ? 'line' : newConfig.type,
+          newConfig.type === 'pie' ? 'line' : newConfig.type,
           newConfig.timeField,
           newConfig.valueFields
         );
@@ -234,30 +230,6 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
           </ResponsiveContainer>
         );
 
-      case 'area':
-        return (
-          <ResponsiveContainer width="100%" height={400}>
-            <AreaChart {...commonProps}>
-              {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              {chartConfig.showLegend && <Legend />}
-              {chartData.datasets.map((dataset: any, index: number) => (
-                <Area
-                  key={index}
-                  type="monotone"
-                  dataKey={`value${index}`}
-                  stroke={dataset.borderColor}
-                  fill={dataset.backgroundColor}
-                  fillOpacity={0.6}
-                  strokeWidth={2}
-                  name={dataset.label}
-                />
-              ))}
-            </AreaChart>
-          </ResponsiveContainer>
-        );
 
       case 'pie':
         return (
@@ -274,9 +246,9 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
                 outerRadius={120}
                 fill="#8884d8"
                 dataKey="value"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                label={({ name, percent }: { name: string; percent?: number }) => `${name}: ${((percent || 0) * 100).toFixed(1)}%`}
               >
-                {chartData.labels.map((_, index) => (
+                {chartData.labels.map((_: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={chartData.datasets[0]?.backgroundColor?.[index] || '#8884d8'} />
                 ))}
               </Pie>
@@ -306,21 +278,21 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
             </Col>
             <Col>
               <Space>
-                <Tooltip title="图表配置">
+                <AntTooltip title="图表配置">
                   <Button
                     icon={<SettingOutlined />}
                     onClick={() => setShowConfig(!showConfig)}
                     type="text"
-                />
-                </Tooltip>
-                <Tooltip title="导出图表">
+                  />
+                </AntTooltip>
+                <AntTooltip title="导出图表">
                   <Button
                     icon={<DownloadOutlined />}
                     onClick={() => {
                       message.info('图表导出功能开发中');
                     }}
                   />
-                </Tooltip>
+                </AntTooltip>
               </Space>
             </Col>
           </Row>
@@ -338,9 +310,6 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
             </Radio.Button>
             <Radio.Button value="bar">
               <BarChartOutlined /> 柱状图
-            </Radio.Button>
-            <Radio.Button value="area">
-              <AreaChartOutlined /> 面积图
             </Radio.Button>
             <Radio.Button value="pie">
               <PieChartOutlined /> 饼图

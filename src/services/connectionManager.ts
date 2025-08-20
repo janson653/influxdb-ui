@@ -26,8 +26,8 @@ export class ConnectionManager {
   private static instance: ConnectionManager;
   private connections: Map<string, InfluxDBConnection> = new Map();
   private connectionHealth: Map<string, ConnectionHealth> = new Map();
-  private reconnectTimers: Map<string, NodeJS.Timeout> = new Map();
-  private healthCheckTimers: Map<string, NodeJS.Timeout> = new Map();
+  private reconnectTimers: Map<string, number> = new Map();
+  private healthCheckTimers: Map<string, number> = new Map();
   private connectionConfigs: Map<string, ConnectionConfig> = new Map();
   private connectionListeners: Map<string, Array<(connection: InfluxDBConnection, status: 'connected' | 'disconnected' | 'error') => void>> = new Map();
 

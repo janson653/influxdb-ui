@@ -1,4 +1,4 @@
-import { InfluxDBConnection } from '../types/influxdb';
+// import { InfluxDBConnection } from '../types/influxdb';
 
 // 查询历史记录项
 export interface QueryHistoryItem {
@@ -53,7 +53,7 @@ export interface QueryHistoryStats {
 class QueryHistoryService {
   private readonly STORAGE_KEY = 'influxdb_query_history';
   private readonly MAX_HISTORY_ITEMS = 1000; // 最大历史记录数量
-  private readonly CLEANUP_THRESHOLD = 1200; // 清理阈值
+  // private readonly CLEANUP_THRESHOLD = 1200; // 清理阈值
 
   /**
    * 保存查询历史记录
@@ -549,10 +549,10 @@ class QueryHistoryService {
 // 导出单例实例
 export const queryHistoryService = new QueryHistoryService();
 
-// 导出类型
-export type {
-  QueryHistoryItem,
-  QueryHistorySearchOptions,
-  QueryHistorySortOptions,
-  QueryHistoryStats
-};
+// 导出类型（已在上面定义过interface，无需重复导出）
+// export type {
+//   QueryHistoryItem,
+//   QueryHistorySearchOptions,
+//   QueryHistorySortOptions,
+//   QueryHistoryStats
+// };

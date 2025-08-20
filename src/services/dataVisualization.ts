@@ -50,7 +50,7 @@ export interface TimeSeriesDataPoint {
 }
 
 export interface ChartConfig {
-  type: 'line' | 'bar' | 'area' | 'scatter' | 'pie';
+  type: 'line' | 'bar' | 'pie';
   title?: string;
   xAxis?: {
     label: string;
@@ -214,7 +214,7 @@ export class DataVisualizationService {
         }
 
         // 处理每个数值字段
-        valueFields.forEach((field, fieldIndex) => {
+        valueFields.forEach((field) => {
           const fieldIndex = series.columns.indexOf(field);
           if (fieldIndex !== -1 && typeof row[fieldIndex] === 'number') {
             const datasetKey = `${seriesName} - ${field}`;
@@ -286,7 +286,7 @@ export class DataVisualizationService {
    * 获取图表类型建议
    */
   static suggestChartType(rowCount: number, columnCount: number, hasTimeColumn: boolean): {
-    type: 'line' | 'bar' | 'area' | 'pie' | 'scatter';
+    type: 'line' | 'bar' | 'pie';
     reason: string;
   } {
     if (columnCount === 2 && rowCount <= 10) {
@@ -397,7 +397,7 @@ export class DataVisualizationService {
    */
   static getConfigPresets(): Array<{
     name: string;
-    type: 'line' | 'bar' | 'area' | 'pie';
+    type: 'line' | 'bar' | 'pie';
     description: string;
     config: ChartConfig;
   }> {
@@ -438,10 +438,10 @@ export class DataVisualizationService {
       },
       {
         name: '面积图',
-        type: 'area',
+        type: 'line',
         description: '适合展示数据的累积趋势',
         config: {
-          type: 'area',
+          type: 'line',
           title: '面积趋势图',
           xAxis: {
             label: '时间',

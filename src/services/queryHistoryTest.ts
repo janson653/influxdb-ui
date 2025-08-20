@@ -69,21 +69,24 @@ export class QueryHistoryTest {
           query: 'SELECT mean(cpu) FROM cpu',
           database: 'telegraf',
           connectionId: 'conn1',
-          tags: ['CPU', '性能']
+          tags: ['CPU', '性能'],
+          isFavorite: false
         },
         {
           title: '内存查询',
           query: 'SELECT mean(memory) FROM memory',
           database: 'telegraf',
           connectionId: 'conn1',
-          tags: ['内存', '性能']
+          tags: ['内存', '性能'],
+          isFavorite: false
         },
         {
           title: '磁盘查询',
           query: 'SELECT mean(disk) FROM disk',
           database: 'monitoring',
           connectionId: 'conn2',
-          tags: ['磁盘', '存储']
+          tags: ['磁盘', '存储'],
+          isFavorite: false
         }
       ];
 

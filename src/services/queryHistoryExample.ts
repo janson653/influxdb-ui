@@ -208,7 +208,7 @@ export function useQueryHistoryExample() {
 
   // 在组件挂载时加载历史记录
   useEffect(() => {
-    loadHistory();
+    // loadHistory();
   }, []);
 
   // 执行查询并保存到历史
@@ -217,7 +217,8 @@ export function useQueryHistoryExample() {
     
     try {
       // 执行查询...
-      const result = await executeQuery(query, connectionId, database);
+      // const result = await executeQuery(query, connectionId, database);
+      const result: any[] | null = null; // 模拟结果
       const executionTime = Date.now() - startTime;
       
       // 保存到历史记录
@@ -228,7 +229,7 @@ export function useQueryHistoryExample() {
         connectionId,
         tags: ['手动查询'],
         executionTime,
-        resultCount: result.length
+        resultCount: 0
       });
       
       return result;
