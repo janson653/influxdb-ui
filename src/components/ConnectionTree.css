@@ -1,0 +1,313 @@
+/* 连接树组件样式 */
+.connection-tree-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #24292e;
+  color: #f6f8fa;
+}
+
+.connection-tree-header {
+  padding: 20px;
+  border-bottom: 1px solid #3f4448;
+}
+
+.connection-tree-header h2 {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: #f6f8fa;
+  font-weight: 600;
+}
+
+.search-container {
+  margin-bottom: 15px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #3f4448;
+  border-radius: 4px;
+  background-color: #3f4448;
+  color: #f6f8fa;
+  font-size: 14px;
+}
+
+.search-input input {
+  background-color: transparent !important;
+  color: #f6f8fa !important;
+}
+
+.search-input input::placeholder {
+  color: #f6f8fa !important;
+  opacity: 0.7;
+}
+
+.search-input .ant-input-prefix {
+  color: #f6f8fa !important;
+  opacity: 0.7;
+}
+
+.connection-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+}
+
+.connection-node {
+  margin-bottom: 5px;
+}
+
+.connection-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+  cursor: pointer;
+  background-color: #3f4448;
+  margin: 0 10px 5px 10px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.connection-header:hover {
+  background-color: #4a4f54;
+}
+
+.connection-header.active {
+  background-color: #0366d6;
+}
+
+.connection-header.active:hover {
+  background-color: #0056b3;
+}
+
+.connection-status-wrapper {
+  margin-right: 10px;
+}
+
+.connection-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.connection-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.connection-name {
+  font-weight: 500;
+  color: #f6f8fa;
+  font-size: 14px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.connection-details {
+  font-size: 12px;
+  color: #f6f8fa;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.connection-toggle {
+  color: #f6f8fa;
+  font-size: 12px;
+  transition: transform 0.2s ease;
+  margin-left: 8px;
+}
+
+.database-list {
+  padding-left: 20px;
+  margin-top: 5px;
+}
+
+.database-node {
+  margin-bottom: 2px;
+}
+
+.database-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 15px;
+  cursor: pointer;
+  border-radius: 4px;
+  margin: 2px 10px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.database-header:hover {
+  background-color: #3f4448;
+}
+
+.database-header.expanded {
+  background-color: #3f4448;
+}
+
+.database-icon {
+  margin-right: 8px;
+  color: #f6f8fa;
+  opacity: 0.8;
+  font-size: 14px;
+}
+
+.database-name {
+  flex: 1;
+  font-size: 13px;
+  color: #f6f8fa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.database-header .anticon {
+  color: #f6f8fa;
+  opacity: 0.7;
+  font-size: 10px;
+  margin-left: 8px;
+}
+
+.measurement-list {
+  padding-left: 20px;
+  margin-top: 2px;
+}
+
+.measurement-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 15px;
+  font-size: 12px;
+  color: #f6f8fa;
+  cursor: pointer;
+  border-radius: 4px;
+  margin: 1px 0;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.measurement-item:hover {
+  background-color: #3f4448;
+  color: #ffffff;
+}
+
+.measurement-item.selected {
+  background-color: #0366d6;
+  color: #ffffff;
+}
+
+.measurement-icon {
+  margin-right: 8px;
+  color: #f6f8fa;
+  opacity: 0.8;
+  font-size: 12px;
+}
+
+.measurement-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.no-databases,
+.no-measurements {
+  padding: 8px 15px;
+  color: #f6f8fa;
+  opacity: 0.6;
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+}
+
+/* 加载状态 */
+.connection-tree .ant-spin {
+  color: #f6f8fa;
+}
+
+.connection-tree .ant-spin-dot-item {
+  background-color: #f6f8fa;
+}
+
+/* 空状态 */
+.connection-tree .ant-empty {
+  color: #f6f8fa;
+}
+
+.connection-tree .ant-empty-description {
+  color: #f6f8fa;
+  opacity: 0.7;
+}
+
+/* 滚动条样式 */
+.connection-tree::-webkit-scrollbar {
+  width: 6px;
+}
+
+.connection-tree::-webkit-scrollbar-track {
+  background: #3f4448;
+}
+
+.connection-tree::-webkit-scrollbar-thumb {
+  background: #586069;
+  border-radius: 3px;
+}
+
+.connection-tree::-webkit-scrollbar-thumb:hover {
+  background: #6a737d;
+}
+
+/* 按钮样式 */
+.connection-tree .ant-btn {
+  border-radius: 4px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.connection-tree .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .connection-tree-header {
+    padding: 15px;
+  }
+  
+  .connection-tree-header h2 {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+  
+  .connection-header {
+    padding: 10px 12px;
+  }
+  
+  .database-header {
+    padding: 6px 12px;
+  }
+  
+  .measurement-item {
+    padding: 4px 12px;
+  }
+  
+  .connection-details {
+    font-size: 11px;
+  }
+  
+  .database-name {
+    font-size: 12px;
+  }
+  
+  .measurement-name {
+    font-size: 11px;
+  }
+}

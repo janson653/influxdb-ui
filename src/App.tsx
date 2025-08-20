@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Modal, message } from 'antd';
-import { DatabaseOutlined } from '@ant-design/icons';
+import { Modal, message, Badge, Tooltip, Space, Button } from 'antd';
+import { DatabaseOutlined, WifiOutlined } from '@ant-design/icons';
 import './App.css';
 
-import ConnectionList from './components/ConnectionList';
+import ConnectionTree from './components/ConnectionTree';
 import ConnectionForm from './components/ConnectionForm';
-import EnhancedQueryPanel from './components/EnhancedQueryPanel';
+import QueryPanel from './components/QueryPanel';
 import RightSidebar from './components/RightSidebar';
 import { InfluxDBConnection } from './types/influxdb';
 import { connectionStorage } from './services/connectionStorage';
+import { connectionManager } from './services/connectionManager';
 
 function App() {
   const [connections, setConnections] = useState<InfluxDBConnection[]>([]);
@@ -16,11 +17,93 @@ function App() {
   const [selectedMeasurement, setSelectedMeasurement] = useState<string | null>(null);
   const [showConnectionForm, setShowConnectionForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [connectionStats, setConnectionStats] = useState({
+    totalConnections: 0,
+    healthyConnections: 0,
+    unhealthyConnections: 0,
+    averageResponseTime: 0
+  });
 
   // 从持久化存储加载连接
   useEffect(() => {
     loadConnections();
   }, []);
+
+  // 监听新建连接事件
+  useEffect(() => {
+    const handleNewConnection = () => {
+      setShowConnectionForm(true);
+    };
+
+    window.addEventListener('newConnection', handleNewConnection);
+    return () => {
+      window.removeEventListener('newConnection', handleNewConnection);
+    };
+  }, []);
+
+  // 初始化连接管理器
+  useEffect(() => {
+    const initConnectionManager = async () => {
+      try {
+        // 加载现有连接到连接管理器
+        for (const connection of connections) {
+          await connectionManager.addConnection(connection, {
+            autoReconnect: true,
+            maxReconnectAttempts: 3,
+            reconnectInterval: 3000,
+            connectionTimeout: 10000,
+            healthCheckInterval: 30000
+          });
+          
+          // 添加连接状态监听器
+          connectionManager.addConnectionListener(connection.id, (conn, status) => {
+            handleConnectionStatusChange(conn, status);
+          });
+        }
+        
+        // 启动连接统计更新
+        updateConnectionStats();
+        const statsInterval = setInterval(updateConnectionStats, 10000);
+        
+        return () => {
+          clearInterval(statsInterval);
+        };
+      } catch (error) {
+        console.error('初始化连接管理器失败:', error);
+      }
+    };
+    
+    if (connections.length > 0) {
+      initConnectionManager();
+    }
+  }, [connections]);
+
+  // 更新连接统计
+  const updateConnectionStats = () => {
+    const stats = connectionManager.getConnectionStats();
+    setConnectionStats(stats);
+  };
+
+  // 处理连接状态变化
+  const handleConnectionStatusChange = (
+    connection: InfluxDBConnection, 
+    status: 'connected' | 'disconnected' | 'error'
+  ) => {
+    console.log(`连接 "${connection.name}" 状态变化: ${status}`);
+    
+    // 更新当前连接状态
+    if (currentConnection?.id === connection.id) {
+      if (status === 'disconnected' || status === 'error') {
+        // 如果是当前连接断开，可以显示通知
+        message.warning(`连接 "${connection.name}" 已断开，正在尝试重连...`);
+      } else if (status === 'connected') {
+        message.success(`连接 "${connection.name}" 已重新建立`);
+      }
+    }
+    
+    // 更新连接统计
+    updateConnectionStats();
+  };
 
   const loadConnections = async () => {
     try {
@@ -46,6 +129,21 @@ function App() {
       await loadConnections(); // 重新加载连接列表
       setShowConnectionForm(false);
       setCurrentConnection(connection);
+      
+      // 添加到连接管理器
+      await connectionManager.addConnection(connection, {
+        autoReconnect: true,
+        maxReconnectAttempts: 3,
+        reconnectInterval: 3000,
+        connectionTimeout: 10000,
+        healthCheckInterval: 30000
+      });
+      
+      // 添加连接状态监听器
+      connectionManager.addConnectionListener(connection.id, (conn, status) => {
+        handleConnectionStatusChange(conn, status);
+      });
+      
       message.success('连接创建并连接成功');
     } catch (error) {
       console.error('保存连接失败:', error);
@@ -66,6 +164,9 @@ function App() {
       const newConnections = connections.filter(conn => conn.id !== connectionId);
       setConnections(newConnections);
       
+      // 从连接管理器中移除
+      connectionManager.removeConnection(connectionId);
+      
       if (currentConnection?.id === connectionId) {
         setCurrentConnection(null);
       }
@@ -79,14 +180,59 @@ function App() {
 
   return (
     <div className="app-layout">
-      {/* 侧边栏 - 连接管理 */}
+      {/* 顶部状态栏 */}
+      <div className="status-bar">
+        <div className="connection-stats">
+          <Tooltip title={`总连接数: ${connectionStats.totalConnections} | 健康连接: ${connectionStats.healthyConnections} | 异常连接: ${connectionStats.unhealthyConnections}`}>
+            <Space>
+              <Badge 
+                count={connectionStats.totalConnections}
+                status="default"
+                style={{ backgroundColor: '#f0f0f0' }}
+              />
+              <Badge 
+                count={connectionStats.healthyConnections}
+                status="success"
+              />
+              <Badge 
+                count={connectionStats.unhealthyConnections}
+                status="error"
+              />
+              <span style={{ fontSize: '12px', color: '#666' }}>
+                平均响应: {connectionStats.averageResponseTime}ms
+              </span>
+            </Space>
+          </Tooltip>
+        </div>
+        <div className="connection-status">
+          {currentConnection && (
+            <Space>
+              {connectionManager.getConnectionHealth(currentConnection.id)?.isHealthy ? (
+                <Badge status="processing" text="已连接" />
+              ) : (
+                <Badge status="error" text="连接异常" />
+              )}
+              <Button
+                size="small"
+                icon={<WifiOutlined />}
+                onClick={() => connectionManager.reconnect(currentConnection.id)}
+              >
+                重连
+              </Button>
+            </Space>
+          )}
+        </div>
+      </div>
+
+      {/* 左侧边栏 - 连接管理 */}
       <div className="sidebar">
-        <ConnectionList
+        <ConnectionTree
           connections={connections}
           currentConnection={currentConnection}
           onSelectConnection={handleSelectConnection}
           onDeleteConnection={handleDeleteConnection}
           onNewConnection={handleNewConnection}
+          onMeasurementSelect={setSelectedMeasurement}
           loading={loading}
         />
       </div>
@@ -94,23 +240,25 @@ function App() {
       {/* 主内容区 - 查询面板 */}
       <div className="main-content">
         {currentConnection ? (
-          <EnhancedQueryPanel 
+          <QueryPanel 
             currentConnection={currentConnection} 
-            onMeasurementSelect={setSelectedMeasurement} 
           />
         ) : (
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            height: '100%',
-            flexDirection: 'column',
-            color: '#666'
-          }}>
-            <DatabaseOutlined style={{ fontSize: 64, marginBottom: 16 }} />
-            <h2>欢迎使用 InfluxDB UI</h2>
-            <p>请先选择一个连接或创建新连接开始使用</p>
-            {loading && <span>正在加载连接...</span>}
+          <div className="query-panel">
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              height: '100%',
+              flexDirection: 'column',
+              color: '#666',
+              backgroundColor: '#ffffff'
+            }}>
+              <DatabaseOutlined style={{ fontSize: 64, marginBottom: 16 }} />
+              <h2>欢迎使用 InfluxDB UI</h2>
+              <p>请先选择一个连接或创建新连接开始使用</p>
+              {loading && <span>正在加载连接...</span>}
+            </div>
           </div>
         )}
       </div>

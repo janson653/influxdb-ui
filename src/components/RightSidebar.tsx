@@ -1,8 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Spin } from 'antd';
-import { DatabaseOutlined } from '@ant-design/icons';
+import { 
+  Card, 
+  Descriptions, 
+  Spin, 
+  Tag, 
+  Space, 
+  Typography,
+  Badge,
+  Tooltip
+} from 'antd';
+import { 
+  DatabaseOutlined, 
+  FieldStringOutlined, 
+  TagOutlined,
+  ClockCircleOutlined,
+  DatabaseFilled,
+  InfoCircleOutlined
+} from '@ant-design/icons';
 import { influxDBService } from '../services/influxdb';
 import './RightSidebar.css';
+
+const { Text } = Typography;
 
 interface RightSidebarProps {
   selectedMeasurement: string | null;
@@ -12,8 +30,9 @@ interface MeasurementInfo {
   recordCount: number;
   dataSize: string;
   lastUpdated: string;
-  tags: string[];
-  fields: string[];
+  tags: Array<{name: string, type: string}>;
+  fields: Array<{name: string, type: string}>;
+  timeRange?: {start: string, end: string};
 }
 
 const RightSidebar: React.FC<RightSidebarProps> = ({ selectedMeasurement }) => {
@@ -46,13 +65,34 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ selectedMeasurement }) => {
           recordCount = parseInt(countValue) || 0;
         }
 
+        // 获取时间范围
+        let timeRange = undefined;
+        try {
+          const timeQuery = `SELECT FIRST("time"), LAST("time") FROM "${selectedMeasurement}"`;
+          const timeResult = await influxDBService.executeQuery(timeQuery, currentConnection.database);
+          
+          if (timeResult.series && timeResult.series.length > 0) {
+            const values = timeResult.series[0].values[0];
+            if (values && values.length >= 2) {
+              timeRange = {
+                start: new Date(values[0]).toLocaleString(),
+                end: new Date(values[1]).toLocaleString()
+              };
+            }
+          }
+        } catch (error) {
+          // 时间范围查询失败时不影响其他功能
+          console.warn('获取时间范围失败:', error);
+        }
+
         // 构造测量信息
         const info: MeasurementInfo = {
           recordCount,
-          dataSize: '计算中...', // InfluxDB 1.0 不直接提供数据大小信息
+          dataSize: estimateDataSize(recordCount, fieldInfo.fields.length),
           lastUpdated: new Date().toLocaleString(),
-          tags: fieldInfo.tags,
-          fields: fieldInfo.fields
+          tags: fieldInfo.tags.map(tag => ({name: tag, type: 'tag'})),
+          fields: fieldInfo.fields.map(field => ({name: field, type: 'field'})),
+          timeRange
         };
 
         setMeasurementInfo(info);
@@ -66,63 +106,139 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ selectedMeasurement }) => {
     fetchMeasurementInfo();
   }, [selectedMeasurement]);
 
+  // 估算数据大小
+  const estimateDataSize = (recordCount: number, fieldCount: number): string => {
+    if (recordCount === 0) return '0 KB';
+    
+    // 简单估算：每条记录约100字节，每个字段约50字节
+    const estimatedBytes = recordCount * (100 + fieldCount * 50);
+    
+    if (estimatedBytes < 1024) {
+      return `${estimatedBytes} B`;
+    } else if (estimatedBytes < 1024 * 1024) {
+      return `${(estimatedBytes / 1024).toFixed(1)} KB`;
+    } else if (estimatedBytes < 1024 * 1024 * 1024) {
+      return `${(estimatedBytes / (1024 * 1024)).toFixed(1)} MB`;
+    } else {
+      return `${(estimatedBytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+    }
+  };
+
   return (
     <div className="right-sidebar-container">
-      <Card title="表属性">
-        {selectedMeasurement ? (
-          <div>
-            <Descriptions title={`${selectedMeasurement}表`} bordered column={1} size="small">
-              <Descriptions.Item label="总记录数">
-                {loading ? <Spin size="small" /> : measurementInfo?.recordCount || 'N/A'}
-              </Descriptions.Item>
-              <Descriptions.Item label="数据大小">
-                {measurementInfo?.dataSize || 'N/A'}
-              </Descriptions.Item>
-              <Descriptions.Item label="最后更新">
-                {measurementInfo?.lastUpdated || 'N/A'}
-              </Descriptions.Item>
-            </Descriptions>
-            
-            {measurementInfo && (
-              <>
-                <Card size="small" title="标签" style={{ marginTop: 16 }}>
-                  {measurementInfo.tags.length > 0 ? (
-                    measurementInfo.tags.map(tag => (
-                      <Descriptions.Item key={tag} label={tag} style={{ marginBottom: 0 }}>
-                        <DatabaseOutlined style={{ color: '#52c41a', marginRight: 4 }} />
-                        标签
-                      </Descriptions.Item>
-                    ))
-                  ) : (
-                    <div style={{ color: '#999', textAlign: 'center', padding: '8px 0' }}>
-                      无标签
-                    </div>
-                  )}
-                </Card>
-                
-                <Card size="small" title="字段" style={{ marginTop: 8 }}>
-                  {measurementInfo.fields.length > 0 ? (
-                    measurementInfo.fields.map(field => (
-                      <Descriptions.Item key={field} label={field} style={{ marginBottom: 0 }}>
-                        字段
-                      </Descriptions.Item>
-                    ))
-                  ) : (
-                    <div style={{ color: '#999', textAlign: 'center', padding: '8px 0' }}>
-                      无字段
-                    </div>
-                  )}
-                </Card>
-              </>
+      {selectedMeasurement ? (
+        <div className="measurement-details">
+          {/* 表标题 */}
+          <div className="table-header">
+            <DatabaseFilled className="table-icon" />
+            <div className="table-title">
+              <Text strong>{selectedMeasurement}</Text>
+              <Text type="secondary" className="table-subtitle">Measurement</Text>
+            </div>
+          </div>
+
+          {/* 基本信息 */}
+          <Card size="small" title="基本信息" className="info-card">
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <Spin size="small" />
+              </div>
+            ) : (
+              <Descriptions column={1} size="small" className="basic-info">
+                <Descriptions.Item label="记录数">
+                  <Badge 
+                    status="processing" 
+                    text={measurementInfo?.recordCount?.toLocaleString() || '0'} 
+                  />
+                </Descriptions.Item>
+                <Descriptions.Item label="估算大小">
+                  <Space>
+                    <DatabaseOutlined style={{ color: '#1890ff' }} />
+                    <Text>{measurementInfo?.dataSize || 'N/A'}</Text>
+                  </Space>
+                </Descriptions.Item>
+                <Descriptions.Item label="最后更新">
+                  <Space>
+                    <ClockCircleOutlined style={{ color: '#52c41a' }} />
+                    <Text>{measurementInfo?.lastUpdated || 'N/A'}</Text>
+                  </Space>
+                </Descriptions.Item>
+                {measurementInfo?.timeRange && (
+                  <>
+                    <Descriptions.Item label="时间范围">
+                      <Tooltip title={`${measurementInfo.timeRange.start} - ${measurementInfo.timeRange.end}`}>
+                        <Text ellipsis style={{ maxWidth: 150 }}>
+                          {measurementInfo.timeRange.start}
+                        </Text>
+                      </Tooltip>
+                    </Descriptions.Item>
+                  </>
+                )}
+              </Descriptions>
             )}
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', color: '#999', padding: '20px 0' }}>
-            <DatabaseOutlined style={{ fontSize: 24, marginBottom: 8 }} />
-            <div>请在左侧选择一个 Measurement</div>
-          </div>
-        )}
-      </Card>
+          </Card>
+
+          {/* 标签列表 */}
+          <Card size="small" title="标签 (Tags)" className="tags-card">
+            {measurementInfo?.tags && measurementInfo.tags.length > 0 ? (
+              <div className="columns-list">
+                {measurementInfo.tags.map((tag, index) => (
+                  <div key={index} className="column-item tag-item">
+                    <div className="column-info">
+                      <TagOutlined className="column-icon tag-icon" />
+                      <div className="column-details">
+                        <div className="column-name">{tag.name}</div>
+                        <div className="column-type">
+                          <Tag color="blue">TAG</Tag>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <InfoCircleOutlined />
+                <Text type="secondary">暂无标签</Text>
+              </div>
+            )}
+          </Card>
+
+          {/* 字段列表 */}
+          <Card size="small" title="字段 (Fields)" className="fields-card">
+            {measurementInfo?.fields && measurementInfo.fields.length > 0 ? (
+              <div className="columns-list">
+                {measurementInfo.fields.map((field, index) => (
+                  <div key={index} className="column-item field-item">
+                    <div className="column-info">
+                      <FieldStringOutlined className="column-icon field-icon" />
+                      <div className="column-details">
+                        <div className="column-name">{field.name}</div>
+                        <div className="column-type">
+                          <Tag color="green">FIELD</Tag>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-state">
+                <InfoCircleOutlined />
+                <Text type="secondary">暂无字段</Text>
+              </div>
+            )}
+          </Card>
+        </div>
+      ) : (
+        <div className="empty-sidebar">
+          <DatabaseOutlined className="empty-icon" />
+          <Text type="secondary">请在左侧选择一个 Measurement</Text>
+          <Text type="secondary" className="empty-hint">
+            选择后将显示详细的表结构信息
+          </Text>
+        </div>
+      )}
     </div>
   );
 };

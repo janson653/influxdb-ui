@@ -1,3 +1,192 @@
 .right-sidebar-container {
+  height: 100%;
   padding: 1rem;
+  overflow-y: auto;
+  background-color: #f6f8fa;
+}
+
+/* 表标题样式 */
+.table-header {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background-color: #ffffff;
+  border: 1px solid #d1d5da;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.table-icon {
+  font-size: 24px;
+  color: #0366d6;
+  margin-right: 12px;
+}
+
+.table-title {
+  flex: 1;
+}
+
+.table-subtitle {
+  font-size: 12px;
+  margin-left: 8px;
+}
+
+/* 卡片样式优化 */
+.info-card,
+.tags-card,
+.fields-card {
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.info-card .ant-card-head,
+.tags-card .ant-card-head,
+.fields-card .ant-card-head {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.basic-info .ant-descriptions-item-label {
+  font-weight: 500;
+  color: #495057;
+}
+
+/* 列表样式 */
+.columns-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.column-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #ffffff;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.column-item:hover {
+  border-color: #0366d6;
+  box-shadow: 0 2px 4px rgba(3, 102, 214, 0.1);
+}
+
+.column-info {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.column-icon {
+  font-size: 16px;
+  margin-right: 8px;
+}
+
+.tag-icon {
+  color: #0366d6;
+}
+
+.field-icon {
+  color: #52c41a;
+}
+
+.column-details {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.column-name {
+  font-weight: 500;
+  color: #24292e;
+  font-size: 13px;
+}
+
+.column-type {
+  font-size: 12px;
+}
+
+/* 空状态样式 */
+.empty-state {
+  text-align: center;
+  padding: 24px 16px;
+  color: #6c757d;
+}
+
+.empty-state .anticon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  opacity: 0.5;
+}
+
+.empty-sidebar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: #6c757d;
+  padding: 40px 20px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.empty-hint {
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+/* 测量详情容器 */
+.measurement-details {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .right-sidebar-container {
+    padding: 8px;
+  }
+  
+  .table-header {
+    padding: 12px;
+  }
+  
+  .column-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .column-type {
+    align-self: flex-end;
+  }
+}
+
+/* 滚动条样式 */
+.right-sidebar-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.right-sidebar-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.right-sidebar-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.right-sidebar-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }

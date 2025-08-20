@@ -51,3 +51,53 @@ export interface QueryConfig {
   database: string;
   measurement?: string;
 } 
+
+// 查询历史记录项
+export interface QueryHistoryItem {
+  id: string;
+  title: string;
+  query: string;
+  database: string;
+  connectionId: string;
+  createdAt: string;
+  lastUsed: string;
+  executionCount: number;
+  tags: string[];
+  description?: string;
+  isFavorite: boolean;
+  executionTime?: number;
+  resultCount?: number;
+  queryType?: 'select' | 'show' | 'create' | 'drop' | 'alter' | 'other';
+}
+
+// 查询历史搜索选项
+export interface QueryHistorySearchOptions {
+  keyword?: string;
+  tags?: string[];
+  connectionId?: string;
+  database?: string;
+  queryType?: QueryHistoryItem['queryType'];
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+  isFavorite?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+// 查询历史排序选项
+export interface QueryHistorySortOptions {
+  field: 'createdAt' | 'lastUsed' | 'executionCount' | 'title' | 'executionTime';
+  order: 'asc' | 'desc';
+}
+
+// 查询历史统计信息
+export interface QueryHistoryStats {
+  totalQueries: number;
+  totalExecutions: number;
+  favoriteQueries: number;
+  topTags: Array<{ tag: string; count: number }>;
+  topConnections: Array<{ connectionId: string; count: number }>;
+  recentQueries: QueryHistoryItem[];
+} 
