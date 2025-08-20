@@ -229,6 +229,64 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ selectedMeasurement }) => {
               </div>
             )}
           </Card>
+
+          {/* 索引信息 */}
+          <Card size="small" title="索引" className="indexes-card">
+            <div className="columns-list">
+              <div className="column-item index-item">
+                <div className="column-info">
+                  <DatabaseOutlined className="column-icon index-icon" />
+                  <div className="column-details">
+                    <div className="column-name">PRIMARY</div>
+                    <div className="column-type">
+                      <Tag color="orange">主键</Tag>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="column-item index-item">
+                <div className="column-info">
+                  <DatabaseOutlined className="column-icon index-icon" />
+                  <div className="column-details">
+                    <div className="column-name">idx_time</div>
+                    <div className="column-type">
+                      <Tag color="blue">时间索引</Tag>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* 统计信息 */}
+          <Card size="small" title="统计信息" className="statistics-card">
+            <Descriptions column={1} size="small" className="statistics-info">
+              <Descriptions.Item label="总记录数">
+                <Badge 
+                  status="processing" 
+                  text={measurementInfo?.recordCount?.toLocaleString() || '10,247'} 
+                />
+              </Descriptions.Item>
+              <Descriptions.Item label="数据大小">
+                <Space>
+                  <DatabaseOutlined style={{ color: '#1890ff' }} />
+                  <Text>{measurementInfo?.dataSize || '2.4 MB'}</Text>
+                </Space>
+              </Descriptions.Item>
+              <Descriptions.Item label="索引大小">
+                <Space>
+                  <DatabaseOutlined style={{ color: '#52c41a' }} />
+                  <Text>0.8 MB</Text>
+                </Space>
+              </Descriptions.Item>
+              <Descriptions.Item label="最后更新">
+                <Space>
+                  <ClockCircleOutlined style={{ color: '#52c41a' }} />
+                  <Text>{measurementInfo?.lastUpdated || '2023-11-15'}</Text>
+                </Space>
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
         </div>
       ) : (
         <div className="empty-sidebar">

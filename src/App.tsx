@@ -5,7 +5,7 @@ import './App.css';
 
 import ConnectionTree from './components/ConnectionTree';
 import ConnectionForm from './components/ConnectionForm';
-import QueryPanel from './components/QueryPanel';
+import EnhancedQueryPanel from './components/EnhancedQueryPanel';
 import RightSidebar from './components/RightSidebar';
 import { InfluxDBConnection } from './types/influxdb';
 import { connectionStorage } from './services/connectionStorage';
@@ -240,8 +240,9 @@ function App() {
       {/* 主内容区 - 查询面板 */}
       <div className="main-content">
         {currentConnection ? (
-          <QueryPanel 
-            currentConnection={currentConnection} 
+          <EnhancedQueryPanel 
+            currentConnection={currentConnection}
+            onMeasurementSelect={setSelectedMeasurement}
           />
         ) : (
           <div className="query-panel">

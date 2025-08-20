@@ -17,15 +17,65 @@
 .query-panel-tabs .ant-tabs-tab {
   border-bottom: 2px solid transparent;
   transition: all 0.2s ease;
+  padding: 12px 20px;
+  cursor: pointer;
+  background-color: #f6f8fa;
+  color: #24292e;
+  border-radius: 0;
+  position: relative;
 }
 
 .query-panel-tabs .ant-tabs-tab-active {
+  background-color: #ffffff;
   border-bottom-color: #0366d6;
-  color: #0366d6;
+  color: #24292e;
+  font-weight: 500;
 }
 
-.query-panel-tabs .ant-tabs-tab:hover {
-  color: #0366d6;
+.query-panel-tabs .ant-tabs-tab:hover:not(.ant-tabs-tab-active) {
+  background-color: #e0e0e0;
+}
+
+/* 标签页新增按钮样式 */
+.query-panel-tabs .ant-tabs-nav-add {
+  padding: 8px 12px;
+  margin-left: 10px;
+  background-color: #28a745;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+  height: 32px;
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.query-panel-tabs .ant-tabs-nav-add:hover {
+  background-color: #218838;
+  transform: scale(1.1);
+}
+
+/* 标签页关闭按钮样式 */
+.query-panel-tabs .ant-tabs-tab-remove {
+  color: #666;
+  opacity: 0;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+.query-panel-tabs .ant-tabs-tab:hover .ant-tabs-tab-remove {
+  opacity: 1;
+}
+
+.query-panel-tabs .ant-tabs-tab-remove:hover {
+  color: #dc3545;
+  background-color: rgba(220, 53, 69, 0.1);
+  border-radius: 2px;
 }
 
 .query-panel-tab-content {
@@ -48,12 +98,45 @@
   border: 1px solid #d1d5da;
   border-radius: 4px;
   transition: border-color 0.2s ease;
+  background-color: #ffffff;
+  color: #24292e;
+  resize: vertical;
 }
 
 .query-textarea:focus {
   border-color: #0366d6;
   box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.2);
   outline: none;
+}
+
+/* 查询编辑器区域样式 */
+.query-editor-area {
+  flex: 1;
+  padding: 20px;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+}
+
+.query-editor-area .ant-input {
+  flex: 1;
+  min-height: 200px;
+  border: 1px solid #d1d5da;
+  border-radius: 4px;
+  padding: 15px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  background-color: #ffffff;
+  color: #24292e;
+  transition: border-color 0.2s ease;
+}
+
+.query-editor-area .ant-input:focus {
+  outline: none;
+  border-color: #0366d6;
+  box-shadow: 0 0 0 2px rgba(3, 102, 214, 0.2);
 }
 
 /* Monaco Editor 容器样式 */
@@ -104,12 +187,19 @@
   background-color: #ffffff;
 }
 
+/* 底部面板样式 */
+.bottom-panel {
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+  background-color: #f6f8fa;
+}
+
 /* 结果标签页样式 */
 .result-tabs {
   display: flex;
   background-color: #f6f8fa;
   border-bottom: 1px solid #d1d5da;
-  margin: 0 20px;
 }
 
 .result-tab {
@@ -117,21 +207,100 @@
   cursor: pointer;
   border-bottom: 2px solid transparent;
   font-size: 14px;
-  color: #586069;
+  color: #24292e;
   transition: all 0.2s ease;
   user-select: none;
 }
 
-.result-tab:hover {
-  color: #0366d6;
-  background-color: #f1f3f4;
+.result-tab:hover:not(.active) {
+  background-color: #e0e0e0;
 }
 
 .result-tab.active {
-  border-bottom-color: #0366d6;
-  color: #0366d6;
   background-color: #ffffff;
-  font-weight: 500;
+  border-bottom-color: #0366d6;
+  color: #24292e;
+}
+
+/* 结果容器 */
+.results-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #ffffff;
+}
+
+/* 结果头部 */
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f6f8fa;
+  border-bottom: 1px solid #d1d5da;
+}
+
+.results-info {
+  font-size: 14px;
+  color: #586069;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.action-buttons .btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #f6f8fa;
+  color: #24292e;
+  border: 1px solid #d1d5da;
+}
+
+.action-buttons .btn:hover {
+  background-color: #e1e4e8;
+  border-color: #d1d5da;
+}
+
+/* 结果表格容器 */
+.results-table-container {
+  flex: 1;
+  overflow: auto;
+}
+
+.results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background-color: #ffffff;
+}
+
+.results-table th,
+.results-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #d1d5da;
+}
+
+.results-table th {
+  background-color: #f6f8fa;
+  font-weight: 600;
+  color: #24292e;
+  position: sticky;
+  top: 0;
+}
+
+.results-table td {
+  color: #24292e;
+}
+
+.results-table tr:hover {
+  background-color: #f6f8fa;
 }
 
 .result-content {
@@ -325,6 +494,58 @@
   border-color: #fbc02d;
 }
 
+/* 查询工具栏样式 */
+.query-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: #e0e0e0;
+  border: 1px solid #d1d5da;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+.toolbar-left {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.toolbar-right {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.query-toolbar .ant-btn {
+  height: 32px;
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.query-toolbar .ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.query-toolbar .ant-btn-primary {
+  background-color: #0366d6;
+  border-color: #0366d6;
+}
+
+.query-toolbar .ant-btn-primary:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+.query-toolbar .ant-select {
+  min-width: 120px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .query-editor-section {
@@ -342,6 +563,25 @@
   .query-panel-container .ant-col {
     width: 100% !important;
     margin-bottom: 15px;
+  }
+
+  .query-toolbar {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .toolbar-left, .toolbar-right {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .toolbar-left {
+    order: 2;
+  }
+
+  .toolbar-right {
+    order: 1;
   }
 }
 

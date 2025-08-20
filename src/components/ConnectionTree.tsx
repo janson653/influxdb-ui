@@ -40,6 +40,21 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [connectionNodes, setConnectionNodes] = useState<ConnectionNode[]>([]);
 
+  // 高亮搜索文本的函数
+  const highlightSearchTerm = (text: string, searchTerm: string) => {
+    if (!searchTerm) return text;
+    
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    const parts = text.split(regex);
+    
+    return parts.map((part, index) => {
+      if (part.toLowerCase() === searchTerm.toLowerCase()) {
+        return <mark key={index} style={{ backgroundColor: '#ffd700', padding: '0 2px', fontWeight: 'bold' }}>{part}</mark>;
+      }
+      return part;
+    });
+  };
+
   // 初始化连接节点
   useEffect(() => {
     const nodes = connections.map(conn => ({
@@ -291,7 +306,9 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
                   />
                 </div>
                 <div className="connection-info">
-                  <div className="connection-name">{node.connection.name}</div>
+                  <div className="connection-name">
+                    {highlightSearchTerm(node.connection.name, searchTerm)}
+                  </div>
                   <div className="connection-details">
                     {node.connection.url} / {node.connection.database}
                   </div>
@@ -319,7 +336,9 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
                           onClick={() => toggleDatabase(node.connection.id, db.name)}
                         >
                           <DatabaseOutlined className="database-icon" />
-                          <span className="database-name">{db.name}</span>
+                          <span className="database-name">
+                            {highlightSearchTerm(db.name, searchTerm)}
+                          </span>
                           {db.expanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
                         </div>
 
@@ -340,7 +359,9 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
                                   onClick={() => selectMeasurement(measurement)}
                                 >
                                   <TableOutlined className="measurement-icon" />
-                                  <span className="measurement-name">{measurement}</span>
+                                  <span className="measurement-name">
+                                    {highlightSearchTerm(measurement, searchTerm)}
+                                  </span>
                                 </div>
                               ))
                             )}

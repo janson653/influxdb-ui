@@ -15,7 +15,9 @@ import {
   notification,
   Spin,
   List,
-  Popover
+  Popover,
+  Dropdown,
+  Menu
 } from 'antd';
 import { 
   PlayCircleOutlined, 
@@ -24,10 +26,14 @@ import {
   DownloadOutlined,
   CodeOutlined,
   ClockCircleOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  FileExcelOutlined,
+  FilePdfOutlined,
+  FileTextOutlined
 } from '@ant-design/icons';
 import { influxDBService } from '../services/influxdb';
 import { QueryResult, InfluxDBConnection } from '../types/influxdb';
+import './QueryPanel.css';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -247,24 +253,96 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
     }
   };
 
-  const exportQueryResult = (tabKey: string) => {
+  const exportQueryResult = async (tabKey: string, format: 'csv' | 'json' | 'excel' = 'csv') => {
     const tab = tabs.find(t => t.key === tabKey);
     if (!tab || !tab.queryResult || tab.queryResult.error) {
       message.error('没有可导出的查询结果');
       return;
     }
 
-    const data = getTableData(tab.queryResult);
-    const csvContent = [
-      data.columns.map(col => col.title).join(','),
-      ...data.data.map(row => data.columns.map(col => row[col.dataIndex]).join(','))
-    ].join('\n');
+    try {
+      const data = getTableData(tab.queryResult);
+      
+      // 检查数据是否为空
+      if (data.data.length === 0) {
+        message.warning('查询结果为空，无法导出');
+        return;
+      }
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `influxdb_query_${Date.now()}.csv`;
-    link.click();
+      // 生成文件名
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+      const filename = `influxdb_query_${tab.selectedDatabase || 'unknown'}_${timestamp}`;
+
+      if (format === 'csv') {
+        // CSV 导出
+        const csvContent = [
+          data.columns.map(col => `"${col.title}"`).join(','),
+          ...data.data.map(row => 
+            data.columns.map(col => {
+              const value = row[col.dataIndex];
+              if (value === null || value === undefined) return '""';
+              return `"${String(value).replace(/"/g, '""')}"`;
+            }).join(',')
+          )
+        ].join('\n');
+
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${filename}.csv`;
+        link.click();
+        
+      } else if (format === 'json') {
+        // JSON 导出
+        const jsonData = {
+          metadata: {
+            exportTime: new Date().toISOString(),
+            database: tab.selectedDatabase,
+            query: tab.query.trim(),
+            recordCount: data.data.length,
+            executionTime: tab.executionTime
+          },
+          columns: data.columns.map(col => ({
+            name: col.title,
+            dataIndex: col.dataIndex,
+            type: col.dataIndex === 'time' ? 'datetime' : 
+                  typeof data.data[0]?.[col.dataIndex] === 'number' ? 'number' : 'string'
+          })),
+          data: data.data
+        };
+
+        const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${filename}.json`;
+        link.click();
+        
+      } else if (format === 'excel') {
+        // Excel 导出 (简化版，生成 TSV 格式)
+        const tsvContent = [
+          data.columns.map(col => col.title).join('\t'),
+          ...data.data.map(row => 
+            data.columns.map(col => {
+              const value = row[col.dataIndex];
+              if (value === null || value === undefined) return '';
+              return String(value).replace(/\t/g, ' ');
+            }).join('\t')
+          )
+        ].join('\n');
+
+        const blob = new Blob([tsvContent], { type: 'text/tab-separated-values;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${filename}.xlsx`;
+        link.click();
+      }
+
+      message.success(`数据已导出为 ${format.toUpperCase()} 格式`);
+      
+    } catch (error) {
+      console.error('导出失败:', error);
+      message.error('导出失败，请重试');
+    }
   };
 
   const insertTemplate = (template: string) => {
@@ -363,74 +441,111 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
           <Row gutter={16}>
             <Col span={16}>
               <Space direction="vertical" style={{ width: '100%' }}>
-                <Space>
-                  <Select
-                    placeholder="选择数据库"
-                    value={tab.selectedDatabase}
-                    onChange={async (value) => {
-                      updateTabState(tab.key, { selectedDatabase: value });
-                      await loadMeasurementsForTab(tab.key, value);
-                    }}
-                    style={{ minWidth: 120 }}
-                    loading={!databases.length}
-                  >
-                    {databases.map(db => (
-                      <Option key={db} value={db}>
-                        <DatabaseOutlined /> {db}
-                      </Option>
-                    ))}
-                  </Select>
-                  <Select
-                    placeholder="选择表/测量值"
-                    style={{ minWidth: 120 }}
-                    onSelect={(value: string) => {
-                      // 替换当前查询中的表名
-                      const newQuery = tab.query.replace(/FROM\s+\"([^\"]+)\"/, `FROM \"${value}\"`);
-                      updateTabState(tab.key, { query: newQuery });
-                      onMeasurementSelect(value);
-                    }}
-                    disabled={!tab.selectedDatabase}
-                  >
-                    {tab.measurements.map(m => (
-                      <Option key={m} value={m}>
-                        <TableOutlined /> {m}
-                      </Option>
-                    ))}
-                  </Select>
-                </Space>
+                {/* 工具栏 */}
+                <div className="query-toolbar">
+                  <div className="toolbar-left">
+                    <Button
+                      type="primary"
+                      onClick={() => {}}
+                      style={{ backgroundColor: '#0366d6' }}
+                    >
+                      新建连接
+                    </Button>
+                    <Button>
+                      保存
+                    </Button>
+                    <Button
+                      type="primary"
+                      icon={<PlayCircleOutlined />}
+                      onClick={() => executeQuery(tab.key)}
+                      loading={tab.loading}
+                      style={{ backgroundColor: '#28a745', borderColor: '#28a745' }}
+                    >
+                      运行 SQL
+                    </Button>
+                  </div>
+                  <div className="toolbar-right">
+                    <Select
+                      placeholder="选择数据库"
+                      value={tab.selectedDatabase}
+                      onChange={async (value) => {
+                        updateTabState(tab.key, { selectedDatabase: value });
+                        await loadMeasurementsForTab(tab.key, value);
+                      }}
+                      style={{ minWidth: 120 }}
+                      loading={!databases.length}
+                    >
+                      {databases.map(db => (
+                        <Option key={db} value={db}>
+                          <DatabaseOutlined /> {db}
+                        </Option>
+                      ))}
+                    </Select>
+                    <Select
+                      placeholder="选择表/测量值"
+                      style={{ minWidth: 120 }}
+                      onSelect={(value: string) => {
+                        // 替换当前查询中的表名
+                        const newQuery = tab.query.replace(/FROM\s+\"([^\"]+)\"/, `FROM \"${value}\"`);
+                        updateTabState(tab.key, { query: newQuery });
+                        onMeasurementSelect(value);
+                      }}
+                      disabled={!tab.selectedDatabase}
+                    >
+                      {tab.measurements.map(m => (
+                        <Option key={m} value={m}>
+                          <TableOutlined /> {m}
+                        </Option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
 
-                <TextArea
-                  value={tab.query}
-                  onChange={(e) => updateTabState(tab.key, { query: e.target.value })}
-                  placeholder="输入 InfluxQL 查询语句 (按 Ctrl+Enter 执行)..."
-                  rows={6}
-                  style={{ 
-                    fontFamily: 'Monaco,Consolas,Courier New,monospace',
-                    resize: 'vertical'
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.ctrlKey && e.key === 'Enter') {
-                      executeQuery(tab.key);
-                    }
-                  }}
-                />
+                <div className="query-editor-area">
+                  <TextArea
+                    value={tab.query}
+                    onChange={(e) => updateTabState(tab.key, { query: e.target.value })}
+                    placeholder="输入 InfluxQL 查询语句 (按 Ctrl+Enter 执行)..."
+                    rows={6}
+                    className="query-textarea"
+                    onKeyDown={(e) => {
+                      if (e.ctrlKey && e.key === 'Enter') {
+                        executeQuery(tab.key);
+                      }
+                    }}
+                  />
+                </div>
 
                 <Space>
-                  <Button
-                    type="primary"
-                    icon={<PlayCircleOutlined />}
-                    onClick={() => executeQuery(tab.key)}
-                    loading={tab.loading}
-                  >
-                    执行查询
-                  </Button>
-                  <Button
-                    icon={<DownloadOutlined />}
-                    onClick={() => exportQueryResult(tab.key)}
+                  <Dropdown
+                    menu={{
+                      items: [
+                        {
+                          key: 'csv',
+                          label: '导出 CSV',
+                          icon: <FileTextOutlined />,
+                          onClick: () => exportQueryResult(tab.key, 'csv')
+                        },
+                        {
+                          key: 'json',
+                          label: '导出 JSON',
+                          icon: <FileTextOutlined />,
+                          onClick: () => exportQueryResult(tab.key, 'json')
+                        },
+                        {
+                          key: 'excel',
+                          label: '导出 Excel',
+                          icon: <FileExcelOutlined />,
+                          onClick: () => exportQueryResult(tab.key, 'excel')
+                        }
+                      ]
+                    }}
                     disabled={!tab.queryResult || !!tab.queryResult.error}
                   >
-                    导出 CSV
-                  </Button>
+                    <Button icon={<DownloadOutlined />}>
+                      导出 <span style={{ fontSize: '10px' }}>▼</span>
+                    </Button>
+                  </Dropdown>
                   <Popover
                     content={
                       <Card
@@ -491,55 +606,101 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
             </div>
           )}
 
-          {tab.queryResult && (
-            <div style={{ marginTop: 16 }}>
-              {tab.error ? (
-                <Card 
-                  bodyStyle={{ 
-                    backgroundColor: '#fff2f0', 
-                    borderColor: '#ffccc7',
-                    color: '#a8071a'
-                  }}
-                >
-                  <Space>
-                    <InfoCircleOutlined />
-                    <span>{tab.error}</span>
-                  </Space>
-                </Card>
-              ) : (
-                <Card 
-                  size="small"
-                  title={`查询结果 - ${columns.length} 列  ${data.length} 行`}
-                  extra={
-                    <Space>
-                      <Button 
-                        size="small" 
-                        icon={<DownloadOutlined />}
-                        onClick={() => exportQueryResult(tab.key)}
-                      >
-                        导出
-                      </Button>
-                    </Space>
-                  }
-                >
-                  <Table
-                    columns={columns}
-                    dataSource={data}
-                    scroll={{ x: 'max-content', y: 400 }}
-                    pagination={{ 
-                      pageSize: 100, 
-                      showSizeChanger: true, 
-                      showQuickJumper: true,
-                      showTotal: (total, range) => 
-                        `${range[0]}-${range[1]} / ${total} 条记录`
-                    }}
-                    size="small"
-                    sticky
-                  />
-                </Card>
-              )}
+          {/* 查询结果面板 */}
+          <div className="bottom-panel" style={{ marginTop: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* 结果标签页 */}
+            <div className="result-tabs">
+              <div className={`result-tab ${!tab.error ? 'active' : ''}`}>
+                结果
+              </div>
+              <div className={`result-tab ${tab.error ? 'active' : ''}`}>
+                消息
+              </div>
             </div>
-          )}
+            
+            {/* 结果内容 */}
+            <div className="results-container" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              {tab.error ? (
+                // 错误信息显示
+                <div style={{ padding: '20px', backgroundColor: '#fff2f0', borderRadius: '4px', margin: '16px' }}>
+                  <Space>
+                    <InfoCircleOutlined style={{ color: '#a8071a' }} />
+                    <span style={{ color: '#a8071a' }}>{tab.error}</span>
+                  </Space>
+                </div>
+              ) : tab.queryResult ? (
+                <>
+                  {/* 结果头部统计 */}
+                  <div className="results-header">
+                    <span className="results-info">
+                      结果 ({data.length} 条记录, 执行时间: {(tab.executionTime || 0) / 1000} 秒)
+                    </span>
+                    <div className="action-buttons">
+                      <Dropdown
+                        menu={{
+                          items: [
+                            {
+                              key: 'csv',
+                              label: '导出 CSV',
+                              icon: <FileTextOutlined />,
+                              onClick: () => exportQueryResult(tab.key, 'csv')
+                            },
+                            {
+                              key: 'json',
+                              label: '导出 JSON',
+                              icon: <FileTextOutlined />,
+                              onClick: () => exportQueryResult(tab.key, 'json')
+                            },
+                            {
+                              key: 'excel',
+                              label: '导出 Excel',
+                              icon: <FileExcelOutlined />,
+                              onClick: () => exportQueryResult(tab.key, 'excel')
+                            }
+                          ]
+                        }}
+                      >
+                        <Button 
+                          className="btn btn-small"
+                          icon={<DownloadOutlined />}
+                          size="small"
+                        >
+                          导出 CSV
+                        </Button>
+                      </Dropdown>
+                      <Button 
+                        className="btn btn-small"
+                        onClick={() => executeQuery(tab.key)}
+                        size="small"
+                      >
+                        刷新
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* 结果表格容器 */}
+                  <div className="results-table-container" style={{ flex: 1, overflow: 'auto', padding: '0 20px 20px' }}>
+                    <Table
+                      columns={columns}
+                      dataSource={data}
+                      scroll={{ x: 'max-content', y: 'calc(100% - 100px)' }}
+                      pagination={{ 
+                        pageSize: 100, 
+                        showSizeChanger: true, 
+                        showQuickJumper: true,
+                        showTotal: (total, range) => 
+                          `${range[0]}-${range[1]} / ${total} 条记录`,
+                        size: 'small'
+                      }}
+                      size="small"
+                      sticky
+                      className="results-table"
+                    />
+                  </div>
+                </>
+              ) : null}
+            </div>
+          </div>
         </div>
       )
     };

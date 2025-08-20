@@ -34,21 +34,30 @@
 /* 卡片样式优化 */
 .info-card,
 .tags-card,
-.fields-card {
+.fields-card,
+.indexes-card,
+.statistics-card {
   margin-bottom: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .info-card .ant-card-head,
 .tags-card .ant-card-head,
-.fields-card .ant-card-head {
+.fields-card .ant-card-head,
+.indexes-card .ant-card-head,
+.statistics-card .ant-card-head {
   background-color: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
 }
 
-.basic-info .ant-descriptions-item-label {
+.basic-info .ant-descriptions-item-label,
+.statistics-info .ant-descriptions-item-label {
   font-weight: 500;
   color: #495057;
+}
+
+.statistics-info .ant-descriptions-item-content {
+  color: #586069;
 }
 
 /* 列表样式 */
@@ -90,6 +99,10 @@
 
 .field-icon {
   color: #52c41a;
+}
+
+.index-icon {
+  color: #fa8c16;
 }
 
 .column-details {
