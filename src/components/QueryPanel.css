@@ -1,13 +1,28 @@
-.query-panel-container {
+.query-panel-container,
+.enhanced-query-panel-container {
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   background-color: #f6f8fa;
+  overflow: hidden;
 }
 
 .query-panel-tabs {
   background-color: #f6f8fa;
   border-bottom: 1px solid #d1d5da;
+  height: 100%;
+  flex: 1;
+}
+
+.query-panel-tabs .ant-tabs-content-holder {
+  height: 100%;
+  overflow: hidden;
+}
+
+.query-panel-tabs .ant-tabs-tabpane {
+  height: 100%;
+  overflow: hidden;
 }
 
 .query-panel-tabs .ant-tabs-nav {
@@ -81,8 +96,11 @@
 .query-panel-tab-content {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
+  padding: 16px;
+  gap: 16px;
 }
 
 .query-editor-section {

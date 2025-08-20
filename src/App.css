@@ -88,6 +88,14 @@ body {
   background-color: #3498db;
 }
 
+/* 主内容容器 - 水平布局 */
+.main-container {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - 40px); /* 减去状态栏高度 */
+  overflow: hidden;
+}
+
 /* 左侧边栏 */
 .sidebar {
   width: 280px;
@@ -97,7 +105,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   border-right: 1px solid #3f4448;
-  height: calc(100vh - 40px); /* 减去状态栏高度 */
+  flex-shrink: 0; /* 防止收缩 */
 }
 
 /* 主内容区 */
@@ -107,7 +115,7 @@ body {
   flex-direction: column;
   background-color: #f6f8fa;
   overflow: hidden;
-  height: calc(100vh - 40px); /* 减去状态栏高度 */
+  min-width: 0; /* 防止内容溢出 */
 }
 
 /* 右侧边栏 */
@@ -118,7 +126,7 @@ body {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 40px); /* 减去状态栏高度 */
+  flex-shrink: 0; /* 防止收缩 */
 }
 
 /* 查询面板容器 */
@@ -523,15 +531,13 @@ body {
 }
 
 @media (max-width: 768px) {
-  .app-layout {
-    flex-direction: row;
+  .main-container {
     overflow-x: auto;
   }
   
   .sidebar {
     min-width: 240px;
     width: 240px;
-    height: calc(100vh - 40px);
   }
   
   .main-content {
@@ -542,13 +548,11 @@ body {
   .right-sidebar {
     min-width: 220px;
     width: 220px;
-    height: calc(100vh - 40px);
-    border-left: 1px solid #d1d5da;
   }
 }
 
 @media (max-width: 600px) {
-  .app-layout {
+  .main-container {
     overflow-x: auto;
   }
   
