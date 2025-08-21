@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Button, Spin, Empty } from 'antd';
-import { SearchOutlined, PlusOutlined, DatabaseOutlined, TableOutlined, CaretDownOutlined, CaretRightOutlined } from '@ant-design/icons';
+import { Input, Button, Spin, Empty, Popconfirm, message, Modal } from 'antd';
+import { SearchOutlined, PlusOutlined, DatabaseOutlined, TableOutlined, CaretDownOutlined, CaretRightOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { InfluxDBConnection } from '../types/influxdb';
 import { influxDBService } from '../services/influxdb';
 import './ConnectionTree.css';
@@ -11,6 +11,7 @@ interface ConnectionTreeProps {
   onSelectConnection: (connection: InfluxDBConnection) => void;
   onDeleteConnection: (connectionId: string) => void;
   onNewConnection: () => void;
+  onEditConnection?: (connection: InfluxDBConnection) => void;
   onMeasurementSelect: (measurement: string) => void;
   loading?: boolean;
 }
@@ -33,12 +34,15 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
   connections,
   currentConnection,
   onSelectConnection,
+  onDeleteConnection,
   onNewConnection,
+  onEditConnection,
   onMeasurementSelect,
   loading = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [connectionNodes, setConnectionNodes] = useState<ConnectionNode[]>([]);
+  const [showActions, setShowActions] = useState<string | null>(null);
 
   // 高亮搜索文本的函数
   const highlightSearchTerm = (text: string, searchTerm: string) => {
@@ -218,6 +222,41 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
     onMeasurementSelect(measurement);
   };
 
+  // 处理删除连接
+  const handleDeleteConnection = async (connectionId: string, connectionName: string) => {
+    try {
+      await onDeleteConnection(connectionId);
+      message.success(`连接 "${connectionName}" 已删除`);
+      setShowActions(null);
+    } catch (error) {
+      console.error('删除连接失败:', error);
+      message.error('删除连接失败');
+    }
+  };
+
+  // 处理编辑连接
+  const handleEditConnection = (connection: InfluxDBConnection) => {
+    if (onEditConnection) {
+      onEditConnection(connection);
+      setShowActions(null);
+    } else {
+      message.info('编辑功能暂未实现');
+    }
+  };
+
+  // 切换操作菜单显示
+  const toggleActions = (connectionId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setShowActions(showActions === connectionId ? null : connectionId);
+  };
+
+  // 点击其他地方关闭操作菜单
+  useEffect(() => {
+    const handleClickOutside = () => setShowActions(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   // 过滤连接
   const filteredConnections = connectionNodes.filter(node =>
     node.connection.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -313,8 +352,52 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
                     {node.connection.url} / {node.connection.database}
                   </div>
                 </div>
-                <div className="connection-toggle">
-                  {node.expanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
+                <div className="connection-actions">
+                  <div className="connection-toggle">
+                    {node.expanded ? <CaretDownOutlined /> : <CaretRightOutlined />}
+                  </div>
+                  <div className="action-menu">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<MoreOutlined />}
+                      onClick={(e) => toggleActions(node.connection.id, e)}
+                      style={{ 
+                        padding: '2px 4px',
+                        fontSize: '12px',
+                        opacity: showActions === node.connection.id ? 1 : 0.6
+                      }}
+                    />
+                    {showActions === node.connection.id && (
+                      <div className="action-dropdown" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => handleEditConnection(node.connection)}
+                        >
+                          编辑
+                        </Button>
+                        <Popconfirm
+                          title="确认删除连接"
+                          description={`确定要删除连接 "${node.connection.name}" 吗？`}
+                          onConfirm={() => handleDeleteConnection(node.connection.id, node.connection.name)}
+                          okText="确认"
+                          cancelText="取消"
+                          placement="left"
+                        >
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<DeleteOutlined />}
+                            danger
+                          >
+                            删除
+                          </Button>
+                        </Popconfirm>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

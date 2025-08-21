@@ -16,6 +16,7 @@ function App() {
   const [currentConnection, setCurrentConnection] = useState<InfluxDBConnection | null>(null);
   const [selectedMeasurement, setSelectedMeasurement] = useState<string | null>(null);
   const [showConnectionForm, setShowConnectionForm] = useState(false);
+  const [editingConnection, setEditingConnection] = useState<InfluxDBConnection | null>(null);
   const [loading, setLoading] = useState(true);
   const [connectionStats, setConnectionStats] = useState({
     totalConnections: 0,
@@ -119,10 +120,17 @@ function App() {
 
   // 新建连接
   const handleNewConnection = () => {
+    setEditingConnection(null);
     setShowConnectionForm(true);
   };
 
-  // 连接创建成功
+  // 编辑连接
+  const handleEditConnection = (connection: InfluxDBConnection) => {
+    setEditingConnection(connection);
+    setShowConnectionForm(true);
+  };
+
+  // 连接创建或更新成功
   const handleConnectionCreated = async (connection: InfluxDBConnection) => {
     try {
       await connectionStorage.storeConnection(connection);
@@ -144,10 +152,12 @@ function App() {
         handleConnectionStatusChange(conn, status);
       });
       
-      message.success('连接创建并连接成功');
+      message.success(editingConnection ? '连接更新成功' : '连接创建并连接成功');
     } catch (error) {
       console.error('保存连接失败:', error);
-      message.error('保存连接失败');
+      message.error(editingConnection ? '更新连接失败' : '保存连接失败');
+    } finally {
+      setEditingConnection(null);
     }
   };
 
@@ -234,6 +244,7 @@ function App() {
             onSelectConnection={handleSelectConnection}
             onDeleteConnection={handleDeleteConnection}
             onNewConnection={handleNewConnection}
+            onEditConnection={handleEditConnection}
             onMeasurementSelect={setSelectedMeasurement}
             loading={loading}
           />
@@ -274,16 +285,23 @@ function App() {
 
       {/* 新建连接弹窗 */}
       <Modal
-        title="新建连接"
+        title={editingConnection ? "编辑连接" : "新建连接"}
         open={showConnectionForm}
-        onCancel={() => setShowConnectionForm(false)}
+        onCancel={() => {
+          setShowConnectionForm(false);
+          setEditingConnection(null);
+        }}
         footer={null}
         width={600}
         destroyOnClose
       >
         <ConnectionForm
+          editingConnection={editingConnection}
           onConnectionCreated={handleConnectionCreated}
-          onCancel={() => setShowConnectionForm(false)}
+          onCancel={() => {
+            setShowConnectionForm(false);
+            setEditingConnection(null);
+          }}
         />
       </Modal>
     </div>

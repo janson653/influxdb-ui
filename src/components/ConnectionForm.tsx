@@ -1,24 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message, Switch } from 'antd';
 import { DatabaseOutlined, LinkOutlined } from '@ant-design/icons';
 import { InfluxDBConnection } from '../types/influxdb';
 import { influxDBService } from '../services/influxdb';
 
 interface ConnectionFormProps {
+  editingConnection?: InfluxDBConnection | null;
   onConnectionCreated: (connection: InfluxDBConnection) => void;
   onCancel: () => void;
 }
 
-const ConnectionForm: React.FC<ConnectionFormProps> = ({ onConnectionCreated, onCancel }) => {
+const ConnectionForm: React.FC<ConnectionFormProps> = ({ editingConnection, onConnectionCreated, onCancel }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [useAuth, setUseAuth] = useState(true);
+
+  // 当编辑连接时，设置表单初始值
+  useEffect(() => {
+    if (editingConnection) {
+      form.setFieldsValue({
+        name: editingConnection.name,
+        url: editingConnection.url,
+        database: editingConnection.database,
+        username: editingConnection.username,
+        password: editingConnection.password
+      });
+      setUseAuth(!!editingConnection.username);
+    } else {
+      form.resetFields();
+      setUseAuth(true);
+    }
+  }, [editingConnection, form]);
 
   const handleSubmit = async (values: any) => {
     setLoading(true);
     try {
       const connection: InfluxDBConnection = {
-        id: Date.now().toString(),
+        id: editingConnection?.id || Date.now().toString(),
         name: values.name,
         url: values.url,
         username: useAuth ? values.username : undefined,
@@ -32,7 +50,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ onConnectionCreated, on
       
       if (isConnected) {
         connection.status = 'connected';
-        message.success('连接成功！');
+        message.success(editingConnection ? '连接更新成功！' : '连接创建成功！');
         onConnectionCreated(connection);
       } else {
         connection.status = 'error';
@@ -49,7 +67,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ onConnectionCreated, on
   };
 
   return (
-    <Card title="新建 InfluxDB 连接" style={{ width: 500 }}>
+    <Card title={editingConnection ? "编辑 InfluxDB 连接" : "新建 InfluxDB 连接"} style={{ width: 500 }}>
       <Form
         form={form}
         layout="vertical"
@@ -119,7 +137,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ onConnectionCreated, on
 
         <Form.Item>
           <Button type="primary" htmlType="submit" loading={loading} style={{ marginRight: 8 }}>
-            测试并保存
+            {editingConnection ? '更新连接' : '测试并保存'}
           </Button>
           <Button onClick={onCancel}>取消</Button>
         </Form.Item>
