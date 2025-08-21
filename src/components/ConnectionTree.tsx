@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Button, Spin, Empty, Popconfirm, message, Modal } from 'antd';
+import { Input, Button, Spin, Empty, Popconfirm, message, Modal, Divider } from 'antd';
 import { SearchOutlined, PlusOutlined, DatabaseOutlined, TableOutlined, CaretDownOutlined, CaretRightOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { InfluxDBConnection } from '../types/influxdb';
 import { influxDBService } from '../services/influxdb';
+import { dataModeManager } from '../services/dataModeManager';
+import DataSetSelector from './DataSetSelector';
 import './ConnectionTree.css';
 
 interface ConnectionTreeProps {
@@ -43,6 +45,16 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [connectionNodes, setConnectionNodes] = useState<ConnectionNode[]>([]);
   const [showActions, setShowActions] = useState<string | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(dataModeManager.isDemoMode());
+
+  // 监听数据模式变化
+  useEffect(() => {
+    const unsubscribe = dataModeManager.addModeListener((mode) => {
+      setIsDemoMode(mode === 'demo');
+    });
+
+    return unsubscribe;
+  }, []);
 
   // 高亮搜索文本的函数
   const highlightSearchTerm = (text: string, searchTerm: string) => {
@@ -316,6 +328,20 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
         >
           新建连接
         </Button>
+        
+        {/* 演示模式下显示数据集选择器 */}
+        {isDemoMode && (
+          <>
+            <Divider style={{ margin: '12px 0', borderColor: '#3f4448' }} />
+            <DataSetSelector 
+              size="small" 
+              onChange={() => {
+                // 数据集切换后，可能需要刷新连接列表
+                console.log('数据集已切换，可以在这里添加刷新逻辑');
+              }}
+            />
+          </>
+        )}
       </div>
 
       {/* 连接树 */}

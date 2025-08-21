@@ -38,6 +38,7 @@ body {
   padding: 0 20px;
   border-bottom: 1px solid #34495e;
   z-index: 1000;
+  gap: 16px;
 }
 
 .connection-stats {
@@ -86,6 +87,73 @@ body {
 
 .connection-status .ant-badge-status-processing .ant-badge-status-dot {
   background-color: #3498db;
+}
+
+/* 数据模式区域样式 */
+.data-mode-section {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.data-mode-section::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transform: translateY(-50%);
+}
+
+.data-mode-section .data-mode-toggle {
+  color: white;
+  position: relative;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 12px;
+  border-radius: 6px;
+  backdrop-filter: blur(10px);
+}
+
+.data-mode-section .ant-badge-status-text {
+  color: white !important;
+}
+
+.data-mode-section .ant-switch {
+  margin: 0 8px;
+}
+
+.data-mode-section .ant-btn-text {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.data-mode-section .ant-btn-text:hover {
+  color: white !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 演示模式特殊效果 */
+.data-mode-section.demo-mode {
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(255, 193, 7, 0.05));
+  border-radius: 8px;
+}
+
+.data-mode-section.demo-mode::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 193, 7, 0.3), transparent);
+}
+
+/* 真实数据模式特殊效果 */
+.data-mode-section.real-mode {
+  background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(129, 199, 132, 0.05));
+  border-radius: 8px;
+}
+
+.data-mode-section.real-mode::before {
+  background: linear-gradient(90deg, transparent, rgba(76, 175, 80, 0.3), transparent);
 }
 
 /* 主内容容器 - 水平布局 */

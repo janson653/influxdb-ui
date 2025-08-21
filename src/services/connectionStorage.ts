@@ -1,4 +1,6 @@
 import { InfluxDBConnection } from '../types/influxdb';
+import { dataModeManager } from './dataModeManager';
+import { mockDataService } from './mockDataService';
 
 class ConnectionStorage {
   // 存储一个新连接
@@ -25,6 +27,27 @@ class ConnectionStorage {
   // 加载所有连接
   async loadConnections(): Promise<InfluxDBConnection[]> {
     try {
+      // 检查当前数据模式
+      if (dataModeManager.isDemoMode()) {
+        console.log('🎭 演示模式 - 加载模拟连接');
+        const mockConnections = mockDataService.getMockConnections();
+        
+        // 合并用户保存的连接和模拟连接
+        const userConnections = await this.loadUserConnections();
+        return [...mockConnections, ...userConnections];
+      }
+
+      // 真实数据模式 - 只加载用户连接
+      return await this.loadUserConnections();
+    } catch (error) {
+      console.error('加载连接失败:', error);
+      return [];
+    }
+  }
+
+  // 加载用户保存的连接
+  private async loadUserConnections(): Promise<InfluxDBConnection[]> {
+    try {
       const configs: any[] = await this.invokeRustCommand('load_connections', {});
       
       return configs.map(config => ({
@@ -37,7 +60,7 @@ class ConnectionStorage {
         status: 'disconnected',
       }));
     } catch (error) {
-      console.error('加载连接失败:', error);
+      console.error('加载用户连接失败:', error);
       return [];
     }
   }

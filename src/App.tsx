@@ -7,9 +7,13 @@ import ConnectionTree from './components/ConnectionTree';
 import ConnectionForm from './components/ConnectionForm';
 import EnhancedQueryPanel from './components/EnhancedQueryPanel';
 import RightSidebar from './components/RightSidebar';
+import DataModeToggle from './components/DataModeToggle';
+import DataSetSelector from './components/DataSetSelector';
 import { InfluxDBConnection } from './types/influxdb';
 import { connectionStorage } from './services/connectionStorage';
 import { connectionManager } from './services/connectionManager';
+import { dataModeManager } from './services/dataModeManager';
+import { influxDBService } from './services/influxdb';
 
 function App() {
   const [connections, setConnections] = useState<InfluxDBConnection[]>([]);
@@ -24,6 +28,25 @@ function App() {
     unhealthyConnections: 0,
     averageResponseTime: 0
   });
+  const [serviceStats, setServiceStats] = useState({
+    cacheSize: 0,
+    cacheHitRate: 0,
+    mode: 'demo' as 'demo' | 'real'
+  });
+
+  // 监听数据模式变化，重新加载连接
+  useEffect(() => {
+    const unsubscribe = dataModeManager.addModeListener((mode) => {
+      console.log('🔄 数据模式变化，重新加载连接列表');
+      setServiceStats(prev => ({
+        ...prev,
+        mode
+      }));
+      loadConnections();
+    });
+
+    return unsubscribe;
+  }, []);
 
   // 从持久化存储加载连接
   useEffect(() => {
@@ -83,6 +106,14 @@ function App() {
   const updateConnectionStats = () => {
     const stats = connectionManager.getConnectionStats();
     setConnectionStats(stats);
+    
+    // 更新服务统计
+    const serviceStats = influxDBService.getConnectionStats();
+    setServiceStats(prev => ({
+      ...prev,
+      cacheSize: serviceStats.cacheSize,
+      cacheHitRate: serviceStats.cacheHitRate
+    }));
   };
 
   // 处理连接状态变化
@@ -214,6 +245,15 @@ function App() {
             </Space>
           </Tooltip>
         </div>
+        
+        {/* 数据模式切换 */}
+        <div className={`data-mode-section ${serviceStats.mode === 'demo' ? 'demo-mode' : 'real-mode'}`}>
+          <Space direction="vertical" size="small">
+            <DataModeToggle size="small" />
+            <DataSetSelector size="small" />
+          </Space>
+        </div>
+        
         <div className="connection-status">
           {currentConnection && (
             <Space>

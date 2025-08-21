@@ -1,0 +1,77 @@
+/* 数据模式切换组件样式 */
+.data-mode-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+/* 动画效果 */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 演示模式特效 */
+.data-mode-toggle .demo-mode-glow {
+  animation: pulse 2s infinite;
+}
+
+/* 徽章样式优化 */
+.data-mode-toggle .ant-badge {
+  line-height: 1;
+}
+
+.data-mode-toggle .ant-badge-status-text {
+  font-size: inherit;
+  margin-left: 4px;
+}
+
+/* 开关样式 */
+.data-mode-toggle .ant-switch {
+  transition: all 0.3s ease;
+}
+
+.data-mode-toggle .ant-switch:hover {
+  box-shadow: 0 0 8px rgba(24, 144, 255, 0.3);
+}
+
+/* 信息按钮样式 */
+.data-mode-toggle .ant-btn-text {
+  color: #666;
+  transition: color 0.3s ease;
+}
+
+.data-mode-toggle .ant-btn-text:hover {
+  color: #1890ff;
+}
+
+/* 模式描述文字 */
+.data-mode-toggle .mode-description {
+  font-size: 11px;
+  color: #666;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .data-mode-toggle {
+    align-items: center;
+  }
+  
+  .data-mode-toggle .mode-description {
+    text-align: center;
+    font-size: 10px;
+  }
+}

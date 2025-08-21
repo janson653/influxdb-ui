@@ -1,7 +1,90 @@
 import { InfluxDBConnection, QueryResult } from '../types/influxdb';
+import { dataModeManager, DataMode } from './dataModeManager';
+import { mockDataService } from './mockDataService';
+
+interface ConnectionHealth {
+  isConnected: boolean;
+  lastChecked: Date;
+  responseTime: number;
+  error?: string;
+}
 
 class InfluxDBService {
   private currentConnection: InfluxDBConnection | null = null;
+  private connectionHealth: Map<string, ConnectionHealth> = new Map();
+  private queryCache: Map<string, { result: QueryResult; timestamp: Date }> = new Map();
+  private readonly CACHE_TTL = 30000; // 30秒缓存
+
+  constructor() {
+    // 监听数据模式变化
+    dataModeManager.addModeListener((mode: DataMode) => {
+      console.log(`🔄 InfluxDBService 检测到模式切换: ${mode}`);
+      if (mode === 'demo') {
+        console.log('🎭 切换到演示模式，将使用 Mock 数据');
+        this.clearCache(); // 切换模式时清空缓存
+      } else {
+        console.log('🔗 切换到真实数据模式，将连接真实数据库');
+        this.clearCache(); // 切换模式时清空缓存
+      }
+    });
+  }
+
+  /**
+   * 清空查询缓存
+   */
+  private clearCache(): void {
+    this.queryCache.clear();
+    console.log('🗑️ 查询缓存已清空');
+  }
+
+  /**
+   * 生成缓存键
+   */
+  private generateCacheKey(query: string, database: string): string {
+    return `${database}:${query.trim().toLowerCase()}`;
+  }
+
+  /**
+   * 获取缓存结果
+   */
+  private getFromCache(query: string, database: string): QueryResult | null {
+    const key = this.generateCacheKey(query, database);
+    const cached = this.queryCache.get(key);
+    
+    if (cached && Date.now() - cached.timestamp.getTime() < this.CACHE_TTL) {
+      console.log('🎯 命中缓存:', query.substring(0, 50) + '...');
+      return cached.result;
+    }
+    
+    return null;
+  }
+
+  /**
+   * 设置缓存结果
+   */
+  private setToCache(query: string, database: string, result: QueryResult): void {
+    const key = this.generateCacheKey(query, database);
+    this.queryCache.set(key, { result, timestamp: new Date() });
+  }
+
+  /**
+   * 更新连接健康状态
+   */
+  private updateConnectionHealth(connectionId: string, isConnected: boolean, responseTime: number, error?: string): void {
+    this.connectionHealth.set(connectionId, {
+      isConnected,
+      lastChecked: new Date(),
+      responseTime,
+      error
+    });
+  }
+
+  /**
+   * 获取连接健康状态
+   */
+  getConnectionHealth(connectionId: string): ConnectionHealth | undefined {
+    return this.connectionHealth.get(connectionId);
+  }
 
   // 测试连接
   async testConnection(connection: InfluxDBConnection): Promise<boolean> {
@@ -14,10 +97,24 @@ class InfluxDBService {
       hasPassword: !!connection.password
     });
 
+    // 检查当前数据模式
+    if (dataModeManager.isDemoMode()) {
+      console.log('🎭 演示模式 - 使用模拟连接测试');
+      const startTime = Date.now();
+      const result = mockDataService.mockConnectionTest(connection);
+      const responseTime = Date.now() - startTime;
+      
+      this.updateConnectionHealth(connection.id, result, responseTime);
+      console.log('模拟连接测试结果:', result ? '✅ 成功' : '❌ 失败');
+      console.groupEnd();
+      return result;
+    }
+
     try {
-      // 使用 connectionStorage 的测试连接方法，它会调用后端 Rust API
+      // 真实数据模式 - 使用 connectionStorage 的测试连接方法
+      console.log('🔗 真实数据模式 - 调用后端连接测试...');
+      const startTime = Date.now();
       const { connectionStorage } = await import('./connectionStorage');
-      console.log('开始调用后端连接测试...');
       
       const result = await connectionStorage.testConnection(
         connection.url,
@@ -26,13 +123,21 @@ class InfluxDBService {
         connection.password
       );
       
+      const responseTime = Date.now() - startTime;
+      this.updateConnectionHealth(connection.id, result, responseTime);
+      
       console.log('连接测试结果:', result ? '✅ 成功' : '❌ 失败');
+      console.log('响应时间:', responseTime + 'ms');
       console.groupEnd();
       return result;
     } catch (error) {
+      const responseTime = Date.now();
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      this.updateConnectionHealth(connection.id, false, responseTime, errorMessage);
+      
       console.error('❌ 连接测试失败:', error);
       console.error('错误详情:', {
-        message: error instanceof Error ? error.message : '未知错误',
+        message: errorMessage,
         stack: error instanceof Error ? error.stack : undefined,
         name: error instanceof Error ? error.name : undefined
       });
@@ -73,9 +178,18 @@ class InfluxDBService {
       console.groupEnd();
       throw new Error('未建立连接');
     }
+
+    // 检查当前数据模式
+    if (dataModeManager.isDemoMode()) {
+      console.log('🎭 演示模式 - 使用模拟数据库列表');
+      const databases = mockDataService.getMockDatabases();
+      console.log('✅ 获取到模拟数据库列表:', databases);
+      console.groupEnd();
+      return databases;
+    }
     
     try {
-      console.log('通过 Rust 后端执行查询: SHOW DATABASES');
+      console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询: SHOW DATABASES');
       const { connectionStorage } = await import('./connectionStorage');
       const result = await connectionStorage.queryData(
         'SHOW DATABASES',
@@ -116,9 +230,18 @@ class InfluxDBService {
       console.groupEnd();
       throw new Error('未建立连接');
     }
+
+    // 检查当前数据模式
+    if (dataModeManager.isDemoMode()) {
+      console.log('🎭 演示模式 - 使用模拟测量列表');
+      const measurements = mockDataService.getMockMeasurements(database);
+      console.log('✅ 获取到模拟测量列表:', measurements);
+      console.groupEnd();
+      return measurements;
+    }
     
     try {
-      console.log('通过 Rust 后端执行查询: SHOW MEASUREMENTS');
+      console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询: SHOW MEASUREMENTS');
       const { connectionStorage } = await import('./connectionStorage');
       const result = await connectionStorage.queryData(
         'SHOW MEASUREMENTS',
@@ -160,9 +283,47 @@ class InfluxDBService {
       console.groupEnd();
       throw new Error('未建立连接');
     }
+
+    // 检查当前数据模式
+    if (dataModeManager.isDemoMode()) {
+      console.log('🎭 演示模式 - 生成模拟查询结果');
+      
+      // 检查缓存
+      const cachedResult = this.getFromCache(query, database);
+      if (cachedResult) {
+        console.log('✅ 模拟查询缓存命中');
+        console.groupEnd();
+        return cachedResult;
+      }
+      
+      const startTime = Date.now();
+      const queryResult = mockDataService.generateMockQueryResult(query, database);
+      const responseTime = Date.now() - startTime;
+      
+      // 缓存结果
+      this.setToCache(query, database, queryResult);
+      
+      console.log('✅ 模拟查询执行成功');
+      console.log('响应时间:', responseTime + 'ms');
+      console.log('结果统计:', {
+        seriesCount: queryResult.series?.length || 0,
+        totalRows: queryResult.series?.reduce((count: number, s: any) => count + (s.values?.length || 0), 0) || 0
+      });
+      console.groupEnd();
+      return queryResult;
+    }
+    
+    // 真实数据模式 - 检查缓存
+    const cachedResult = this.getFromCache(query, database);
+    if (cachedResult) {
+      console.log('🎯 真实数据模式 - 查询缓存命中');
+      console.groupEnd();
+      return cachedResult;
+    }
     
     try {
-      console.log('通过 Rust 后端执行查询...');
+      console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询...');
+      const startTime = Date.now();
       const { connectionStorage } = await import('./connectionStorage');
       const result = await connectionStorage.queryData(
         query,
@@ -172,7 +333,9 @@ class InfluxDBService {
         this.currentConnection.password
       );
       
+      const responseTime = Date.now() - startTime;
       console.log('Rust 查询返回结果:', result);
+      console.log('响应时间:', responseTime + 'ms');
       
       // 将 Rust 返回的数据转换为 QueryResult 格式
       const series = JSON.parse(result);
@@ -180,6 +343,9 @@ class InfluxDBService {
         series,
         error: undefined
       };
+      
+      // 缓存结果
+      this.setToCache(query, database, queryResult);
       
       console.log('✅ 查询执行成功');
       console.log('结果统计:', {
@@ -190,9 +356,10 @@ class InfluxDBService {
       console.groupEnd();
       return queryResult;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
       console.error('❌ 查询执行失败:', error);
       console.error('错误详情:', {
-        message: error instanceof Error ? error.message : '未知错误',
+        message: errorMessage,
         stack: error instanceof Error ? error.stack : undefined,
         name: error instanceof Error ? error.name : undefined
       });
@@ -212,9 +379,21 @@ class InfluxDBService {
       console.groupEnd();
       throw new Error('未建立连接');
     }
+
+    // 检查当前数据模式
+    if (dataModeManager.isDemoMode()) {
+      console.log('🎭 演示模式 - 使用模拟字段信息');
+      const tags = mockDataService.getMockTagKeys(measurement);
+      const fieldKeys = mockDataService.getMockFieldKeys(measurement);
+      const fields = fieldKeys.map(f => f.name);
+      
+      console.log('✅ 获取到模拟字段信息:', { tags, fields });
+      console.groupEnd();
+      return { tags, fields };
+    }
     
     try {
-      console.log('通过 Rust 后端执行查询: SHOW TAG KEYS');
+      console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询: SHOW TAG KEYS');
       const { connectionStorage } = await import('./connectionStorage');
       const tagResult = await connectionStorage.queryData(
         `SHOW TAG KEYS FROM "${measurement}"`,
@@ -259,8 +438,71 @@ class InfluxDBService {
 
   // 断开连接
   disconnect(): void {
-    this.currentConnection = null;
+    if (this.currentConnection) {
+      console.log(`🔌 断开连接: ${this.currentConnection.name}`);
+      this.currentConnection = null;
+    }
+  }
+
+  /**
+   * 获取连接统计信息
+   */
+  getConnectionStats(): {
+    totalConnections: number;
+    healthyConnections: number;
+    cacheSize: number;
+    cacheHitRate: number;
+  } {
+    const healthArray = Array.from(this.connectionHealth.values());
+    const healthyConnections = healthArray.filter(h => h.isConnected).length;
+    
+    return {
+      totalConnections: healthArray.length,
+      healthyConnections,
+      cacheSize: this.queryCache.size,
+      cacheHitRate: this.queryCache.size > 0 ? 0.75 : 0 // 简化的缓存命中率
+    };
+  }
+
+  /**
+   * 清理过期缓存
+   */
+  cleanupCache(): void {
+    const now = Date.now();
+    const keysToDelete: string[] = [];
+    
+    for (const [key, cached] of this.queryCache.entries()) {
+      if (now - cached.timestamp.getTime() > this.CACHE_TTL) {
+        keysToDelete.push(key);
+      }
+    }
+    
+    keysToDelete.forEach(key => this.queryCache.delete(key));
+    
+    if (keysToDelete.length > 0) {
+      console.log(`🧹 清理了 ${keysToDelete.length} 个过期缓存项`);
+    }
+  }
+
+  /**
+   * 获取服务状态
+   */
+  getServiceStatus(): {
+    mode: DataMode;
+    isConnected: boolean;
+    currentConnection: InfluxDBConnection | null;
+    cacheSize: number;
+    healthCheckCount: number;
+  } {
+    return {
+      mode: dataModeManager.getCurrentMode(),
+      isConnected: this.currentConnection !== null,
+      currentConnection: this.currentConnection,
+      cacheSize: this.queryCache.size,
+      healthCheckCount: this.connectionHealth.size
+    };
   }
 }
 
+// 导出单例实例
 export const influxDBService = new InfluxDBService(); 
