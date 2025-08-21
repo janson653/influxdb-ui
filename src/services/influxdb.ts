@@ -1,6 +1,5 @@
 import { InfluxDBConnection, QueryResult } from '../types/influxdb';
 import { dataModeManager, DataMode } from './dataModeManager';
-import { mockDataService } from './mockDataService';
 
 interface ConnectionHealth {
   isConnected: boolean;
@@ -105,27 +104,13 @@ class InfluxDBService {
       hasPassword: !!connection.password
     });
 
-    // 检查当前数据模式
-    if (dataModeManager.isDemoMode()) {
-      console.log('🎭 演示模式 - 使用模拟连接测试');
-      const startTime = Date.now();
-      const result = mockDataService.mockConnectionTest(connection);
-      const responseTime = Date.now() - startTime;
-      
-      this.updateConnectionHealth(connection.id, result, responseTime);
-      console.log('模拟连接测试结果:', result ? '✅ 成功' : '❌ 失败');
-      console.groupEnd();
-      return result;
-    }
+    // 真实模式下的连接测试（模拟数据由 UnifiedDataService 处理）
 
     try {
       // 真实数据模式 - 使用 connectionStorage 的测试连接方法
       console.log('🔗 真实数据模式 - 调用后端连接测试...');
       
-      // 严格验证：确保真实模式下才允许API调用
-      if (!dataModeManager.validateRealDataApiCall('testConnection')) {
-        throw new Error('演示模式下禁止调用真实数据库连接');
-      }
+      // 直接调用真实数据库API（数据模式验证在 UnifiedDataService 中处理）
       
       const startTime = Date.now();
       const { connectionStorage } = await import('./connectionStorage');
@@ -193,22 +178,12 @@ class InfluxDBService {
       throw new Error('未建立连接');
     }
 
-    // 检查当前数据模式
-    if (dataModeManager.isDemoMode()) {
-      console.log('🎭 演示模式 - 使用模拟数据库列表');
-      const databases = mockDataService.getMockDatabases();
-      console.log('✅ 获取到模拟数据库列表:', databases);
-      console.groupEnd();
-      return databases;
-    }
+    // 真实数据模式下获取数据库列表（模拟数据由 UnifiedDataService 处理）
     
     try {
       console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询: SHOW DATABASES');
       
-      // 严格验证：确保真实模式下才允许API调用
-      if (!dataModeManager.validateRealDataApiCall('getDatabases')) {
-        throw new Error('演示模式下禁止调用真实数据库查询');
-      }
+      // 直接调用真实数据库API
       
       const { connectionStorage } = await import('./connectionStorage');
       const result = await connectionStorage.queryData(
@@ -251,22 +226,12 @@ class InfluxDBService {
       throw new Error('未建立连接');
     }
 
-    // 检查当前数据模式
-    if (dataModeManager.isDemoMode()) {
-      console.log('🎭 演示模式 - 使用模拟测量列表');
-      const measurements = mockDataService.getMockMeasurements(database);
-      console.log('✅ 获取到模拟测量列表:', measurements);
-      console.groupEnd();
-      return measurements;
-    }
+    // 真实数据模式下获取测量列表（模拟数据由 UnifiedDataService 处理）
     
     try {
       console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询: SHOW MEASUREMENTS');
       
-      // 严格验证：确保真实模式下才允许API调用
-      if (!dataModeManager.validateRealDataApiCall('getMeasurements')) {
-        throw new Error('演示模式下禁止调用真实数据库查询');
-      }
+      // 直接调用真实数据库API
       
       const { connectionStorage } = await import('./connectionStorage');
       const result = await connectionStorage.queryData(
@@ -310,34 +275,7 @@ class InfluxDBService {
       throw new Error('未建立连接');
     }
 
-    // 检查当前数据模式
-    if (dataModeManager.isDemoMode()) {
-      console.log('🎭 演示模式 - 生成模拟查询结果');
-      
-      // 检查缓存
-      const cachedResult = this.getFromCache(query, database);
-      if (cachedResult) {
-        console.log('✅ 模拟查询缓存命中');
-        console.groupEnd();
-        return cachedResult;
-      }
-      
-      const startTime = Date.now();
-      const queryResult = mockDataService.generateMockQueryResult(query, database);
-      const responseTime = Date.now() - startTime;
-      
-      // 缓存结果
-      this.setToCache(query, database, queryResult);
-      
-      console.log('✅ 模拟查询执行成功');
-      console.log('响应时间:', responseTime + 'ms');
-      console.log('结果统计:', {
-        seriesCount: queryResult.series?.length || 0,
-        totalRows: queryResult.series?.reduce((count: number, s: any) => count + (s.values?.length || 0), 0) || 0
-      });
-      console.groupEnd();
-      return queryResult;
-    }
+    // 真实数据模式下执行查询（模拟数据由 UnifiedDataService 处理）
     
     // 真实数据模式 - 检查缓存
     const cachedResult = this.getFromCache(query, database);
@@ -350,10 +288,7 @@ class InfluxDBService {
     try {
       console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询...');
       
-      // 严格验证：确保真实模式下才允许API调用
-      if (!dataModeManager.validateRealDataApiCall('executeQuery')) {
-        throw new Error('演示模式下禁止调用真实数据库查询');
-      }
+      // 直接调用真实数据库API
       
       const startTime = Date.now();
       const { connectionStorage } = await import('./connectionStorage');
@@ -412,25 +347,12 @@ class InfluxDBService {
       throw new Error('未建立连接');
     }
 
-    // 检查当前数据模式
-    if (dataModeManager.isDemoMode()) {
-      console.log('🎭 演示模式 - 使用模拟字段信息');
-      const tags = mockDataService.getMockTagKeys(measurement);
-      const fieldKeys = mockDataService.getMockFieldKeys(measurement);
-      const fields = fieldKeys.map(f => f.name);
-      
-      console.log('✅ 获取到模拟字段信息:', { tags, fields });
-      console.groupEnd();
-      return { tags, fields };
-    }
+    // 真实数据模式下获取字段信息（模拟数据由 UnifiedDataService 处理）
     
     try {
       console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询: SHOW TAG KEYS');
       
-      // 严格验证：确保真实模式下才允许API调用
-      if (!dataModeManager.validateRealDataApiCall('getMeasurementFields')) {
-        throw new Error('演示模式下禁止调用真实数据库查询');
-      }
+      // 直接调用真实数据库API
       
       const { connectionStorage } = await import('./connectionStorage');
       const tagResult = await connectionStorage.queryData(

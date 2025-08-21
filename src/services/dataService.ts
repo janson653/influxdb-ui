@@ -64,11 +64,14 @@ class UnifiedDataService implements DataServiceInterface {
     const currentMode = dataModeManager.getCurrentMode();
     
     if (currentMode === 'demo') {
-      console.log('🎭 使用演示数据服务');
+      console.log('🎭 路由到演示数据服务');
       return this.createMockServiceAdapter();
     } else {
-      console.log('🔗 使用真实数据服务');
+      console.log('🔗 路由到真实数据服务');
       await this.loadRealDataService();
+      if (!this.realDataService) {
+        throw new Error('无法加载真实数据服务');
+      }
       return this.realDataService;
     }
   }
@@ -120,7 +123,7 @@ class UnifiedDataService implements DataServiceInterface {
   }
 
   /**
-   * 验证数据模式
+   * 验证数据模式并记录日志
    */
   private validateDataMode(operation: string): void {
     const currentMode = dataModeManager.getCurrentMode();
@@ -130,6 +133,10 @@ class UnifiedDataService implements DataServiceInterface {
       console.log(`🎭 演示模式下执行 ${operation} - 将使用模拟数据`);
     } else {
       console.log(`🔗 真实数据模式下执行 ${operation} - 将访问真实数据库`);
+      // 验证真实模式下API调用的合法性
+      if (!dataModeManager.validateRealDataApiCall(operation)) {
+        throw new Error(`演示模式下禁止调用真实数据库API: ${operation}`);
+      }
     }
   }
 

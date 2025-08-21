@@ -204,15 +204,30 @@ class ConnectionStorage {
         console.groupEnd();
         return null;
       } else if (command === 'test_connection_with_auth') {
-        console.log('开发模式 - 模拟连接测试成功');
-        console.groupEnd();
-        return true; // 开发模式下简化测试
-      } else if (command === 'query_data') {
-        console.log('开发模式 - 模拟查询数据');
-        console.log('查询语句:', payload.query_string);
+        // 检查当前数据模式
+        const currentMode = dataModeManager.getCurrentMode();
+        console.log(`开发模式 - 当前数据模式: ${currentMode}`);
         
-        // 根据不同的查询语句返回不同的模拟数据
-        if (payload.query_string === 'SHOW DATABASES') {
+        if (currentMode === 'demo') {
+          console.log('演示模式 - 模拟连接测试成功');
+          console.groupEnd();
+          return true; // 演示模式下模拟成功
+        } else {
+          console.log('真实数据模式 - 开发环境中无法测试真实连接');
+          console.groupEnd();
+          throw new Error('真实数据模式下无法在开发环境中测试连接，请确保数据模式设置正确'); 
+        }
+      } else if (command === 'query_data') {
+        // 检查当前数据模式，只有演示模式才返回模拟数据
+        const currentMode = dataModeManager.getCurrentMode();
+        console.log(`开发模式 - 当前数据模式: ${currentMode}`);
+        
+        if (currentMode === 'demo') {
+          console.log('演示模式 - 返回模拟查询数据');
+          console.log('查询语句:', payload.query_string);
+          
+          // 根据不同的查询语句返回不同的模拟数据
+          if (payload.query_string === 'SHOW DATABASES') {
           console.log('返回模拟数据库列表');
           const mockDatabases = [
             {
@@ -293,6 +308,13 @@ class ConnectionStorage {
           ];
           console.groupEnd();
           return JSON.stringify(mockData);
+        }
+        } else {
+          // 真实数据模式 - 在开发环境中抛出错误，因为无法连接真实数据库
+          console.log('真实数据模式 - 开发环境中无法连接真实 InfluxDB');
+          console.error('❌ 真实数据模式需要连接到实际的 InfluxDB 实例，但开发环境中未配置');
+          console.groupEnd();
+          throw new Error('真实数据模式下无法在开发环境中执行查询，请确保数据模式设置正确或连接到真实的 InfluxDB 实例');
         }
       }
     }
