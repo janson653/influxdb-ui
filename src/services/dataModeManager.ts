@@ -15,6 +15,7 @@ class DataModeManager {
   private static readonly STORAGE_KEY = 'influxdb_ui_data_mode';
   private currentMode: DataMode = 'demo';
   private listeners: Array<(mode: DataMode) => void> = [];
+  private apiCallInterceptors: Array<() => void> = [];
 
   constructor() {
     this.initializeMode();
@@ -62,6 +63,9 @@ class DataModeManager {
     this.saveMode();
     
     console.log(`🔄 数据模式切换: ${previousMode} → ${mode}`);
+    
+    // 执行API调用拦截器（清理缓存、重置状态等）
+    this.executeApiCallInterceptors();
     
     // 通知所有监听器
     this.notifyListeners(mode);
@@ -163,7 +167,59 @@ class DataModeManager {
   resetToDefault(): void {
     this.switchMode('demo');
   }
+
+  /**
+   * 添加API调用拦截器
+   */
+  addApiCallInterceptor(interceptor: () => void): () => void {
+    this.apiCallInterceptors.push(interceptor);
+    
+    // 返回移除拦截器的函数
+    return () => {
+      const index = this.apiCallInterceptors.indexOf(interceptor);
+      if (index > -1) {
+        this.apiCallInterceptors.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * 执行所有API调用拦截器
+   */
+  private executeApiCallInterceptors(): void {
+    this.apiCallInterceptors.forEach(interceptor => {
+      try {
+        interceptor();
+      } catch (error) {
+        console.error('❌ API调用拦截器执行失败:', error);
+      }
+    });
+  }
+
+  /**
+   * 验证当前是否允许真实数据API调用
+   */
+  validateRealDataApiCall(apiName: string): boolean {
+    if (this.currentMode === 'demo') {
+      console.warn(`🚫 演示模式下禁止调用真实数据API: ${apiName}`);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * 强制使用演示数据（开发测试用）
+   */
+  forceDemoMode(): boolean {
+    if (this.currentMode !== 'demo') {
+      console.warn('🎭 强制切换到演示模式');
+      this.switchMode('demo');
+      return true;
+    }
+    return false;
+  }
 }
 
 // 导出单例实例
 export const dataModeManager = new DataModeManager();
+

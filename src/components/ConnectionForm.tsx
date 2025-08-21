@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message, Switch } from 'antd';
 import { DatabaseOutlined, LinkOutlined } from '@ant-design/icons';
 import { InfluxDBConnection } from '../types/influxdb';
-import { influxDBService } from '../services/influxdb';
+import { dataService } from '../services/dataService';
 
 interface ConnectionFormProps {
   editingConnection?: InfluxDBConnection | null;
@@ -46,7 +46,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ editingConnection, onCo
       };
 
       // 测试连接
-      const isConnected = await influxDBService.testConnection(connection);
+      const isConnected = await dataService.testConnection(connection);
       
       if (isConnected) {
         connection.status = 'connected';

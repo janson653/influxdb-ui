@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Input, Button, Spin, Empty, Popconfirm, message, Modal, Divider } from 'antd';
+import { Input, Button, Spin, Empty, Popconfirm, message, Divider } from 'antd';
 import { SearchOutlined, PlusOutlined, DatabaseOutlined, TableOutlined, CaretDownOutlined, CaretRightOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { InfluxDBConnection } from '../types/influxdb';
-import { influxDBService } from '../services/influxdb';
+import { dataService } from '../services/dataService';
 import { dataModeManager } from '../services/dataModeManager';
 import DataSetSelector from './DataSetSelector';
 import './ConnectionTree.css';
@@ -121,8 +121,8 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
       const connection = connections.find(conn => conn.id === connectionId);
       if (!connection) return;
 
-      await influxDBService.connect(connection);
-      const databaseList = await influxDBService.getDatabases();
+      await dataService.connect(connection);
+      const databaseList = await dataService.getDatabases();
       
       const databases = databaseList.map(db => ({
         name: db,
@@ -196,7 +196,7 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
       const connection = connections.find(conn => conn.id === connectionId);
       if (!connection) return;
 
-      const measurementList = await influxDBService.getMeasurements(databaseName);
+      const measurementList = await dataService.getMeasurements(databaseName);
       
       setConnectionNodes(prev => 
         prev.map(node => {

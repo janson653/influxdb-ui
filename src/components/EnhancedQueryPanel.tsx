@@ -16,8 +16,7 @@ import {
   Spin,
   List,
   Popover,
-  Dropdown,
-  Menu
+  Dropdown
 } from 'antd';
 import { 
   PlayCircleOutlined, 
@@ -28,10 +27,9 @@ import {
   ClockCircleOutlined,
   InfoCircleOutlined,
   FileExcelOutlined,
-  FilePdfOutlined,
   FileTextOutlined
 } from '@ant-design/icons';
-import { influxDBService } from '../services/influxdb';
+import { dataService } from '../services/dataService';
 import { QueryResult, InfluxDBConnection } from '../types/influxdb';
 import './QueryPanel.css';
 
@@ -91,10 +89,10 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
       
       try {
         console.log('步骤 1: 建立连接');
-        await influxDBService.connect(currentConnection);
+        await dataService.connect(currentConnection);
         
         console.log('步骤 2: 获取数据库列表');
-        const dbList = await influxDBService.getDatabases();
+        const dbList = await dataService.getDatabases();
         console.log('获取到数据库列表:', dbList);
         
         setDatabases(dbList);
@@ -196,7 +194,7 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
 
     try {
       console.log('发送查询请求...');
-      const result = await influxDBService.executeQuery(tab.query, tab.selectedDatabase);
+      const result = await dataService.executeQuery(tab.query, tab.selectedDatabase);
       const executionTime = Date.now() - startTime;
       
       console.log('查询响应:', result);
@@ -355,7 +353,7 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
   const loadMeasurementsForTab = async (tabKey: string, database: string) => {
     if (!database) return;
     try {
-      const measurementList = await influxDBService.getMeasurements(database);
+      const measurementList = await dataService.getMeasurements(database);
       updateTabState(tabKey, { measurements: measurementList });
     } catch (error) {
       // 静默失败，不显示错误

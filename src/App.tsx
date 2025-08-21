@@ -13,7 +13,7 @@ import { InfluxDBConnection } from './types/influxdb';
 import { connectionStorage } from './services/connectionStorage';
 import { connectionManager } from './services/connectionManager';
 import { dataModeManager } from './services/dataModeManager';
-import { influxDBService } from './services/influxdb';
+import { dataService } from './services/dataService';
 
 function App() {
   const [connections, setConnections] = useState<InfluxDBConnection[]>([]);
@@ -108,11 +108,12 @@ function App() {
     setConnectionStats(stats);
     
     // 更新服务统计
-    const serviceStats = influxDBService.getConnectionStats();
+    const serviceStatus = dataService.getServiceStatus();
     setServiceStats(prev => ({
       ...prev,
-      cacheSize: serviceStats.cacheSize,
-      cacheHitRate: serviceStats.cacheHitRate
+      cacheSize: 0, // Mock 数据不需要缓存
+      cacheHitRate: 0,
+      mode: serviceStatus.mode
     }));
   };
 

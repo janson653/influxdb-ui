@@ -22,10 +22,18 @@ class InfluxDBService {
       if (mode === 'demo') {
         console.log('🎭 切换到演示模式，将使用 Mock 数据');
         this.clearCache(); // 切换模式时清空缓存
+        this.disconnect(); // 断开当前真实连接
       } else {
         console.log('🔗 切换到真实数据模式，将连接真实数据库');
         this.clearCache(); // 切换模式时清空缓存
       }
+    });
+    
+    // 注册API调用拦截器
+    dataModeManager.addApiCallInterceptor(() => {
+      this.clearCache();
+      this.connectionHealth.clear();
+      console.log('🧹 数据模式切换：清理服务状态');
     });
   }
 
@@ -113,6 +121,12 @@ class InfluxDBService {
     try {
       // 真实数据模式 - 使用 connectionStorage 的测试连接方法
       console.log('🔗 真实数据模式 - 调用后端连接测试...');
+      
+      // 严格验证：确保真实模式下才允许API调用
+      if (!dataModeManager.validateRealDataApiCall('testConnection')) {
+        throw new Error('演示模式下禁止调用真实数据库连接');
+      }
+      
       const startTime = Date.now();
       const { connectionStorage } = await import('./connectionStorage');
       
@@ -190,6 +204,12 @@ class InfluxDBService {
     
     try {
       console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询: SHOW DATABASES');
+      
+      // 严格验证：确保真实模式下才允许API调用
+      if (!dataModeManager.validateRealDataApiCall('getDatabases')) {
+        throw new Error('演示模式下禁止调用真实数据库查询');
+      }
+      
       const { connectionStorage } = await import('./connectionStorage');
       const result = await connectionStorage.queryData(
         'SHOW DATABASES',
@@ -242,6 +262,12 @@ class InfluxDBService {
     
     try {
       console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询: SHOW MEASUREMENTS');
+      
+      // 严格验证：确保真实模式下才允许API调用
+      if (!dataModeManager.validateRealDataApiCall('getMeasurements')) {
+        throw new Error('演示模式下禁止调用真实数据库查询');
+      }
+      
       const { connectionStorage } = await import('./connectionStorage');
       const result = await connectionStorage.queryData(
         'SHOW MEASUREMENTS',
@@ -323,6 +349,12 @@ class InfluxDBService {
     
     try {
       console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询...');
+      
+      // 严格验证：确保真实模式下才允许API调用
+      if (!dataModeManager.validateRealDataApiCall('executeQuery')) {
+        throw new Error('演示模式下禁止调用真实数据库查询');
+      }
+      
       const startTime = Date.now();
       const { connectionStorage } = await import('./connectionStorage');
       const result = await connectionStorage.queryData(
@@ -394,6 +426,12 @@ class InfluxDBService {
     
     try {
       console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询: SHOW TAG KEYS');
+      
+      // 严格验证：确保真实模式下才允许API调用
+      if (!dataModeManager.validateRealDataApiCall('getMeasurementFields')) {
+        throw new Error('演示模式下禁止调用真实数据库查询');
+      }
+      
       const { connectionStorage } = await import('./connectionStorage');
       const tagResult = await connectionStorage.queryData(
         `SHOW TAG KEYS FROM "${measurement}"`,
@@ -441,6 +479,8 @@ class InfluxDBService {
     if (this.currentConnection) {
       console.log(`🔌 断开连接: ${this.currentConnection.name}`);
       this.currentConnection = null;
+      this.clearCache(); // 断开连接时清理缓存
+      this.connectionHealth.clear(); // 清理连接健康状态
     }
   }
 

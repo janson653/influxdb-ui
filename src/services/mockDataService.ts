@@ -117,12 +117,18 @@ class MockDataService {
   /**
    * 获取演示数据库列表
    */
+  /**
+   * 获取演示数据库列表 - 只返回模拟数据
+   */
   getMockDatabases(): string[] {
     return this.getCurrentDataSet().databases;
   }
 
   /**
    * 获取演示测量列表
+   */
+  /**
+   * 获取演示测量列表 - 只返回模拟数据
    */
   getMockMeasurements(database: string): string[] {
     const dataSet = this.getCurrentDataSet();
@@ -209,6 +215,9 @@ class MockDataService {
 
   /**
    * 生成模拟查询结果数据
+   */
+  /**
+   * 生成演示查询结果 - 纯模拟数据，不访问真实数据库
    */
   generateMockQueryResult(query: string, database: string): QueryResult {
     console.log(`🎭 生成模拟查询数据 - 数据库: ${database}, 查询: ${query}`);
@@ -593,6 +602,9 @@ class MockDataService {
 
   /**
    * 模拟连接测试
+   */
+  /**
+   * 模拟连接测试 - 严格演示模式下使用
    */
   mockConnectionTest(connection: InfluxDBConnection): boolean {
     // 演示模式下总是返回成功

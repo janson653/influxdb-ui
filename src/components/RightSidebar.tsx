@@ -17,7 +17,7 @@ import {
   DatabaseFilled,
   InfoCircleOutlined
 } from '@ant-design/icons';
-import { influxDBService } from '../services/influxdb';
+import { dataService } from '../services/dataService';
 import './RightSidebar.css';
 
 const { Text } = Typography;
@@ -46,18 +46,18 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ selectedMeasurement }) => {
       setLoading(true);
       try {
         // 获取当前连接
-        const currentConnection = influxDBService.getCurrentConnection();
+        const currentConnection = dataService.getCurrentConnection();
         if (!currentConnection) return;
 
         // 获取字段信息
-        const fieldInfo = await influxDBService.getMeasurementFields(
+        const fieldInfo = await dataService.getMeasurementFields(
           currentConnection.database,
           selectedMeasurement
         );
 
         // 获取记录数
         const countQuery = `SELECT COUNT(*) FROM "${selectedMeasurement}"`;
-        const countResult = await influxDBService.executeQuery(countQuery, currentConnection.database);
+        const countResult = await dataService.executeQuery(countQuery, currentConnection.database);
         
         let recordCount = 0;
         if (countResult.series && countResult.series.length > 0) {
@@ -69,7 +69,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ selectedMeasurement }) => {
         let timeRange = undefined;
         try {
           const timeQuery = `SELECT FIRST("time"), LAST("time") FROM "${selectedMeasurement}"`;
-          const timeResult = await influxDBService.executeQuery(timeQuery, currentConnection.database);
+          const timeResult = await dataService.executeQuery(timeQuery, currentConnection.database);
           
           if (timeResult.series && timeResult.series.length > 0) {
             const values = timeResult.series[0].values[0];
