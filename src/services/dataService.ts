@@ -5,7 +5,7 @@
 
 import { InfluxDBConnection, QueryResult } from '../types/influxdb';
 import { dataModeManager, DataMode } from './dataModeManager';
-import { mockDataService } from './mockDataService';
+import { simplifiedMockDataService } from './simplifiedMockDataService';
 
 interface DataServiceInterface {
   testConnection(connection: InfluxDBConnection): Promise<boolean>;
@@ -51,9 +51,9 @@ class UnifiedDataService implements DataServiceInterface {
    */
   private async loadRealDataService(): Promise<void> {
     if (!this.realDataService) {
-      const { influxDBService } = await import('./influxdb');
-      this.realDataService = influxDBService;
-      console.log('✅ 真实数据服务已加载');
+      const { refactoredInfluxDBService } = await import('./influxdbRefactored');
+      this.realDataService = refactoredInfluxDBService;
+      console.log('✅ 重构后的真实数据服务已加载');
     }
   }
 
@@ -83,34 +83,34 @@ class UnifiedDataService implements DataServiceInterface {
     return {
       testConnection: async (connection: InfluxDBConnection) => {
         console.log('🎭 Mock: 测试连接');
-        return mockDataService.mockConnectionTest(connection);
+        return simplifiedMockDataService.mockConnectionTest(connection);
       },
       
       connect: async (connection: InfluxDBConnection) => {
         console.log('🎭 Mock: 建立连接');
         this.currentConnection = connection;
-        return mockDataService.mockConnectionTest(connection);
+        return simplifiedMockDataService.mockConnectionTest(connection);
       },
       
       getDatabases: async () => {
         console.log('🎭 Mock: 获取数据库列表');
-        return mockDataService.getMockDatabases();
+        return simplifiedMockDataService.getMockDatabases();
       },
       
       getMeasurements: async (database: string) => {
         console.log('🎭 Mock: 获取测量列表');
-        return mockDataService.getMockMeasurements(database);
+        return simplifiedMockDataService.getMockMeasurements(database);
       },
       
       executeQuery: async (query: string, database: string) => {
         console.log('🎭 Mock: 执行查询');
-        return mockDataService.generateMockQueryResult(query, database);
+        return simplifiedMockDataService.generateMockQueryResult(query, database);
       },
       
       getMeasurementFields: async (_database: string, measurement: string) => {
         console.log('🎭 Mock: 获取字段信息');
-        const tags = mockDataService.getMockTagKeys(measurement);
-        const fieldKeys = mockDataService.getMockFieldKeys(measurement);
+        const tags = simplifiedMockDataService.getMockTagKeys(measurement);
+        const fieldKeys = simplifiedMockDataService.getMockFieldKeys(measurement);
         const fields = fieldKeys.map(f => f.name);
         return { tags, fields };
       },

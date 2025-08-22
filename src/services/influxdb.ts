@@ -96,21 +96,34 @@ class InfluxDBService {
   // 测试连接
   async testConnection(connection: InfluxDBConnection): Promise<boolean> {
     console.group('🔍 InfluxDB 连接测试');
-    console.log('连接配置:', {
+    console.log('📋 连接配置详情:', {
       name: connection.name,
       url: connection.url,
-      database: connection.database,
-      username: connection.username,
-      hasPassword: !!connection.password
+      database: connection.database || '(未设置)',
+      username: connection.username || '(未设置)',
+      hasPassword: !!connection.password,
+      passwordLength: connection.password ? connection.password.length : 0,
+      connectionId: connection.id
     });
 
-    // 真实模式下的连接测试（模拟数据由 UnifiedDataService 处理）
+    // 检查数据模式
+    const currentMode = dataModeManager.getCurrentMode();
+    console.log('📊 当前数据模式:', currentMode);
+
+    if (currentMode === 'demo') {
+      console.log('🎭 演示模式下，跳过真实连接测试');
+      console.groupEnd();
+      return true; // 演示模式下总是返回成功
+    }
 
     try {
-      // 真实数据模式 - 使用 connectionStorage 的测试连接方法
       console.log('🔗 真实数据模式 - 调用后端连接测试...');
-      
-      // 直接调用真实数据库API（数据模式验证在 UnifiedDataService 中处理）
+      console.log('📤 传递给 connectionStorage 的参数:', {
+        url: connection.url,
+        database: connection.database,
+        username: connection.username || undefined,
+        hasPassword: !!connection.password
+      });
       
       const startTime = Date.now();
       const { connectionStorage } = await import('./connectionStorage');
@@ -125,8 +138,9 @@ class InfluxDBService {
       const responseTime = Date.now() - startTime;
       this.updateConnectionHealth(connection.id, result, responseTime);
       
-      console.log('连接测试结果:', result ? '✅ 成功' : '❌ 失败');
-      console.log('响应时间:', responseTime + 'ms');
+      console.log('✅ 连接测试结果:', result ? '✅ 连接成功' : '❌ 连接失败');
+      console.log('⏱️ 响应时间:', responseTime + 'ms');
+      console.log('📝 测试完成时间:', new Date().toISOString());
       console.groupEnd();
       return result;
     } catch (error) {
@@ -135,10 +149,12 @@ class InfluxDBService {
       this.updateConnectionHealth(connection.id, false, responseTime, errorMessage);
       
       console.error('❌ 连接测试失败:', error);
-      console.error('错误详情:', {
+      console.error('🔍 错误详情分析:', {
         message: errorMessage,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
         stack: error instanceof Error ? error.stack : undefined,
-        name: error instanceof Error ? error.name : undefined
+        isTauriError: error instanceof Error && error.message.includes('TAURI'),
+        timestamp: new Date().toISOString()
       });
       console.groupEnd();
       return false;
@@ -466,5 +482,8 @@ class InfluxDBService {
   }
 }
 
-// 导出单例实例
-export const influxDBService = new InfluxDBService(); 
+// 导出重构后的服务实例（向后兼容）
+export const influxDBService = new InfluxDBService();
+
+// 重新导出重构后的服务
+export { refactoredInfluxDBService } from './influxdbRefactored'; 

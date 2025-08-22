@@ -74,7 +74,7 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ editingConnection, onCo
         onFinish={handleSubmit}
         initialValues={{
           url: 'http://localhost:8086',
-          database: 'test',
+          database: 'testdb',
           username: 'admin',
           password: 'password'
         }}

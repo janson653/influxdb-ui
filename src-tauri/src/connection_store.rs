@@ -98,28 +98,57 @@ pub async fn test_connection_with_auth(
     use influxdb::Client;
     
     println!("🔧 [Rust] 开始测试连接:");
-    println!("  URL: {}", url);
-    println!("  Database: {}", database);
-    println!("  Username: {:?}", username);
-    println!("  Has Password: {}", password.is_some());
+    println!("  📍 调用栈: test_connection_with_auth");
+    println!("  🌐 URL: {}", url);
+    println!("  🗄️  Database: {}", database);
+    println!("  👤 Username: {:?}", username);
+    println!("  🔐 Has Password: {}", password.is_some());
+    println!("  📏 Password Length: {:?}", password.as_ref().map(|p| p.len()));
+    
+    // 验证URL格式
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        println!("❌ [Rust] URL格式错误，缺少协议前缀: {}", url);
+        return Err(format!("URL格式错误，请使用http://或https://开头: {}", url));
+    }
     
     let mut client = Client::new(&url, &database);
     
-    if let (Some(u), Some(p)) = (username, password) {
-        println!("🔐 [Rust] 添加认证信息: {}", u);
+    if let Some(u) = username {
+        let p = password.unwrap_or_default(); // Use empty string if password is None
+        println!("🔐 [Rust] 添加认证信息 - 用户名: {}, 密码长度: {}", u, p.len());
         client = client.with_auth(u, p);
+    } else {
+        println!("ℹ️ [Rust] 无认证信息，使用匿名连接");
     }
     
-    println!("🏓 [Rust] 发送 ping 请求...");
+    println!("🏓 [Rust] 发送 ping 请求到: {}", url);
+    let start_time = std::time::Instant::now();
+    
     match client.ping().await {
         Ok(_) => {
-            println!("✅ [Rust] 连接测试成功");
+            let duration = start_time.elapsed();
+            println!("✅ [Rust] 连接测试成功 - 响应时间: {:?}", duration);
+            println!("✅ [Rust] 可以成功连接到 InfluxDB 实例");
             Ok(true)
         }
         Err(e) => {
-            println!("❌ [Rust] 连接测试失败: {}", e);
+            let duration = start_time.elapsed();
+            println!("❌ [Rust] 连接测试失败 - 响应时间: {:?}", duration);
+            println!("❌ [Rust] 错误详情: {}", e);
             println!("❌ [Rust] 错误类型: {:?}", std::mem::discriminant(&e));
-            Err(format!("连接失败: {}", e))
+            
+            // 提供更详细的错误信息
+            let error_msg = if e.to_string().contains("connection refused") {
+                format!("连接被拒绝，请检查服务器是否运行在: {}", url)
+            } else if e.to_string().contains("timed out") {
+                format!("连接超时，请检查网络连通性: {}", url)
+            } else if e.to_string().contains("certificate") {
+                format!("SSL证书错误: {}", e)
+            } else {
+                format!("连接失败: {}", e)
+            };
+            
+            Err(error_msg)
         }
     }
 }

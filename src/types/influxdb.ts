@@ -29,10 +29,18 @@ export interface Field {
   type: 'string' | 'number' | 'boolean';
 }
 
-// InfluxDB 1.0 查询结果
+// InfluxDB 1.0 查询结果 (兼容旧版本)
 export interface QueryResult {
   series?: Series[];
   error?: string;
+}
+
+// 新的查询结果格式 (与 Rust 后端统一)
+export interface EnhancedQueryResult {
+  series: Series[];
+  execution_time_ms: number;
+  row_count: number;
+  warning?: string;
 }
 
 // 数据系列
@@ -41,6 +49,20 @@ export interface Series {
   columns: string[];
   values: any[][];
   tags?: Record<string, string>;
+}
+
+// 字段信息 (与 Rust 后端统一)
+export interface FieldInfo {
+  name: string;
+  data_type: string;
+}
+
+// 测量信息
+export interface MeasurementInfo {
+  name: string;
+  field_count: number;
+  tag_count: number;
+  series_count?: number;
 }
 
 // 查询配置

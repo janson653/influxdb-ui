@@ -30,6 +30,7 @@ import {
   FileTextOutlined
 } from '@ant-design/icons';
 import { dataService } from '../services/dataService';
+import { dataModeManager } from '../services/dataModeManager';
 import { QueryResult, InfluxDBConnection } from '../types/influxdb';
 import './QueryPanel.css';
 
@@ -86,6 +87,7 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
       
       console.group('📊 加载数据库列表');
       console.log('当前连接:', currentConnection.name);
+      console.log('当前数据模式:', dataModeManager.getCurrentMode());
       
       try {
         console.log('步骤 1: 建立连接');
@@ -100,11 +102,11 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
         // 如果只有一个数据库，自动选中
         if (dbList.length === 1) {
           console.log('只有一个数据库，自动选中:', dbList[0]);
-          const updatedTab = {
-            ...tabs[0],
+          const updatedTabs = tabs.map(tab => ({
+            ...tab,
             selectedDatabase: dbList[0],
-          };
-          setTabs([updatedTab]);
+          }));
+          setTabs(updatedTabs);
           // 自动加载测量列表
           await loadMeasurementsForTab(tabs[0].key, dbList[0]);
         }
@@ -120,9 +122,27 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
         });
         
         message.error('获取数据库列表失败');
+        
+        // 提供更详细的错误诊断信息
+        const errorMessage = error instanceof Error ? error.message : '未知错误';
+        const currentMode = dataModeManager.getCurrentMode();
+        
+        let errorDescription = `无法连接到数据库服务器。错误: ${errorMessage}`;
+        
+        if (currentMode === 'demo') {
+          errorDescription += '\n\n当前处于演示模式，请检查数据服务配置。';
+        } else {
+          errorDescription += '\n\n当前处于真实数据模式，请检查：';
+          errorDescription += '\n1. InfluxDB 服务器是否正在运行';
+          errorDescription += '\n2. 连接配置是否正确（URL、端口、认证信息）';
+          errorDescription += '\n3. 网络连接是否正常';
+          errorDescription += '\n4. 防火墙设置是否允许连接';
+        }
+        
         notification.error({
           message: '连接错误',
-          description: `无法连接到数据库服务器，请检查连接配置。错误: ${error instanceof Error ? error.message : '未知错误'}`
+          description: errorDescription,
+          duration: 8
         });
         console.groupEnd();
       }
@@ -165,6 +185,7 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
   };
 
   const updateTabState = (key: string, newState: Partial<TabInfo>) => {
+    console.log('🔄 更新标签页状态:', { key, newState });
     setTabs(tabs.map(tab => 
       tab.key === key ? { ...tab, ...newState } : tab
     ));
@@ -172,8 +193,19 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
 
   const executeQuery = async (tabKey: string) => {
     const tab = tabs.find(t => t.key === tabKey);
-    if (!tab || !tab.selectedDatabase) {
-      console.log('❌ 未选择数据库');
+    console.log('🔍 执行查询检查:', {
+      tabKey,
+      tab: tab ? { selectedDatabase: tab.selectedDatabase, query: tab.query } : '未找到标签页'
+    });
+    
+    if (!tab) {
+      console.log('❌ 未找到查询标签页');
+      message.error('查询标签页不存在');
+      return;
+    }
+    
+    if (!tab.selectedDatabase || tab.selectedDatabase.trim() === '') {
+      console.log('❌ 未选择数据库:', tab.selectedDatabase);
       message.error('请先选择数据库');
       return;
     }
@@ -465,8 +497,9 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
                   <div className="toolbar-right">
                     <Select
                       placeholder="选择数据库"
-                      value={tab.selectedDatabase}
+                      value={tab.selectedDatabase || undefined}
                       onChange={async (value) => {
+                        console.log('📊 数据库选择变更:', value);
                         updateTabState(tab.key, { selectedDatabase: value });
                         await loadMeasurementsForTab(tab.key, value);
                       }}

@@ -1,13 +1,6 @@
 use influxdb::{Client, Timestamp, InfluxDbWriteable, ReadQuery};
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
-
-#[derive(Deserialize, Serialize, Debug)]
-struct Series {
-    name: String,
-    columns: Vec<String>,
-    values: Vec<Vec<serde_json::Value>>,
-}
+use crate::database_operations::{QueryResult, Series, ApiError};
 
 #[derive(Debug, InfluxDbWriteable)]
 pub struct Measurement {
@@ -52,7 +45,7 @@ pub async fn query_data(
     influxdb_database: String,
     username: Option<String>,
     password: Option<String>,
-) -> Result<String, String> {
+) -> Result<QueryResult, ApiError> {
     println!("🔍 [Rust] 执行查询:");
     println!("  URL: {}", influxdb_url);
     println!("  Database: {}", influxdb_database);
@@ -74,19 +67,25 @@ pub async fn query_data(
             let result: Result<Vec<Series>, _> = serde_json::from_value(serde_json::to_value(json.results).unwrap());
             match result {
                 Ok(series) => {
-                    let json_str = serde_json::to_string(&series).unwrap_or_else(|e| format!("Failed to serialize JSON: {}", e));
-                    println!("📄 [Rust] 返回数据长度: {}", json_str.len());
-                    Ok(json_str)
+                    let row_count = series.iter().map(|s| s.values.len()).sum();
+                    let query_result = QueryResult {
+                        series,
+                        execution_time_ms: 0, // 简化版本，不计算时间
+                        row_count,
+                        warning: None,
+                    };
+                    println!("📄 [Rust] 返回数据: {} series, {} rows", query_result.series.len(), query_result.row_count);
+                    Ok(query_result)
                 },
                 Err(e) => {
                     println!("❌ [Rust] JSON 反序列化失败: {}", e);
-                    Err(format!("Failed to deserialize JSON: {}", e))
+                    Err(ApiError::ParseError(format!("Failed to deserialize JSON: {}", e)))
                 },
             }
         },
         Err(e) => {
             println!("❌ [Rust] 查询执行失败: {}", e);
-            Err(format!("Failed to query data: {}", e))
+            Err(ApiError::QueryError(format!("Failed to query data: {}", e)))
         }
     }
 }
