@@ -82,6 +82,9 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
     const fetchDatabases = async () => {
       if (!currentConnection) {
         console.log('⚠️ 没有当前连接，跳过数据库列表加载');
+        setDatabases([]);
+        // 清空所有标签页的数据库选择
+        setTabs(tabs.map(tab => ({ ...tab, selectedDatabase: '', measurements: [] })));
         return;
       }
       
@@ -109,6 +112,9 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
           setTabs(updatedTabs);
           // 自动加载测量列表
           await loadMeasurementsForTab(tabs[0].key, dbList[0]);
+        } else if (dbList.length === 0) {
+          // 没有数据库，清空选择
+          setTabs(tabs.map(tab => ({ ...tab, selectedDatabase: '', measurements: [] })));
         }
         
         console.log('✅ 数据库列表加载完成');
@@ -144,6 +150,10 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
           description: errorDescription,
           duration: 8
         });
+        
+        // 出错时清空数据库列表和选择
+        setDatabases([]);
+        setTabs(tabs.map(tab => ({ ...tab, selectedDatabase: '', measurements: [] })));
         console.groupEnd();
       }
     };
@@ -497,7 +507,7 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
                   <div className="toolbar-right">
                     <Select
                       placeholder="选择数据库"
-                      value={tab.selectedDatabase || undefined}
+                      value={tab.selectedDatabase || null}
                       onChange={async (value) => {
                         console.log('📊 数据库选择变更:', value);
                         updateTabState(tab.key, { selectedDatabase: value });

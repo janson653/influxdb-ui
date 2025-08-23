@@ -197,37 +197,32 @@ class InfluxDBService {
     // 真实数据模式下获取数据库列表（模拟数据由 UnifiedDataService 处理）
     
     try {
-      console.log('🔗 真实数据模式 - 通过 Rust 后端执行查询: SHOW DATABASES');
+      console.log('🔗 真实数据模式 - 通过 Rust 后端获取数据库列表');
       
-      // 直接调用真实数据库API
-      
-      const { connectionStorage } = await import('./connectionStorage');
-      const result = await connectionStorage.queryData(
-        'SHOW DATABASES',
-        this.currentConnection.url,
-        this.currentConnection.database,
-        this.currentConnection.username,
-        this.currentConnection.password
-      );
-      
-      console.log('Rust 查询返回结果:', result);
-      
-      // 解析返回的 JSON 数据
-      const series = JSON.parse(result);
-      if (series && series.length > 0) {
-        const databases = series[0].values.map((row: any[]) => row[0]);
+      // 使用专门的 get_databases Tauri 命令
+      if (typeof window !== 'undefined' && (window as any).__TAURI_IPC__) {
+        const { invoke } = await import('@tauri-apps/api/core');
+        
+        console.log('调用 Tauri 命令: get_databases');
+        const databases = await invoke<string[]>('get_databases', {
+          connectionId: this.currentConnection.id || ''
+        });
+        
         console.log('✅ 获取到数据库列表:', databases);
         console.groupEnd();
         return databases;
+      } else {
+        // 开发环境回退方案
+        console.log('⚠️ 非 Tauri 环境，使用模拟数据');
+        console.groupEnd();
+        return ['telegraf', 'monitoring', 'iot_data'];
       }
-      
-      console.log('⚠️ 没有找到数据库');
-      console.groupEnd();
-      return [];
     } catch (error) {
       console.error('❌ 获取数据库列表失败:', error);
       console.groupEnd();
-      throw error;
+      
+      // 出错时返回空数组而不是抛出错误
+      return [];
     }
   }
 
