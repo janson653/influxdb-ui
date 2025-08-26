@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json;
 use tauri::{command};
 use std::fs;
 
@@ -94,7 +95,7 @@ pub async fn test_connection_with_auth(
     database: String,
     username: Option<String>,
     password: Option<String>,
-) -> Result<bool, String> {
+) -> Result<serde_json::Value, String> {
     use influxdb::Client;
     
     println!("🔧 [Rust] 开始测试连接:");
@@ -129,7 +130,7 @@ pub async fn test_connection_with_auth(
             let duration = start_time.elapsed();
             println!("✅ [Rust] 连接测试成功 - 响应时间: {:?}", duration);
             println!("✅ [Rust] 可以成功连接到 InfluxDB 实例");
-            Ok(true)
+            Ok(serde_json::json!({ "success": true, "response_time": duration.as_millis() }))
         }
         Err(e) => {
             let duration = start_time.elapsed();
@@ -151,4 +152,14 @@ pub async fn test_connection_with_auth(
             Err(error_msg)
         }
     }
+}
+
+#[command]
+pub async fn test_connection(
+    url: String,
+    database: String,
+    username: Option<String>,
+    password: Option<String>,
+) -> Result<serde_json::Value, String> {
+    test_connection_with_auth(url, database, username, password).await
 }

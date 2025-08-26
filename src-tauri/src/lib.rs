@@ -20,6 +20,7 @@ pub fn run() {
             connection_store::load_connections,
             connection_store::delete_connection,
             connection_store::test_connection_with_auth,
+            connection_store::test_connection,
             database_operations::get_databases,
             database_operations::get_measurements,
             database_operations::get_tag_keys,

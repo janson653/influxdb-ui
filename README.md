@@ -22,8 +22,10 @@
 - **前端框架**：React 18 + TypeScript
 - **UI 组件库**：Ant Design 5.x
 - **桌面应用框架**：Tauri 2.x
-- **HTTP 客户端**：Axios
+- **后端语言**：Rust + Tokio
+- **数据库**：InfluxDB 1.0 (InfluxQL)
 - **构建工具**：Vite
+- **包管理器**：pnpm
 
 ## 开发环境
 
@@ -47,6 +49,13 @@ pnpm dev
 pnpm build
 pnpm tauri build
 ```
+
+## 架构特点
+
+- **统一架构**: 开发环境与生产环境使用完全相同的Tauri Commands架构
+- **安全性**: 数据库连接配置由Rust后端管理，不暴露给前端
+- **性能**: 利用Rust的并发能力处理数据库操作
+- **一致性**: 消除了开发环境与生产环境的行为差异
 
 ## 使用说明
 

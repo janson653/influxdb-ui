@@ -30,7 +30,6 @@ import {
   FileTextOutlined
 } from '@ant-design/icons';
 import { dataService } from '../services/dataService';
-import { dataModeManager } from '../services/dataModeManager';
 import { QueryResult, InfluxDBConnection } from '../types/influxdb';
 import './QueryPanel.css';
 
@@ -90,11 +89,15 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
       
       console.group('📊 加载数据库列表');
       console.log('当前连接:', currentConnection.name);
-      console.log('当前数据模式:', dataModeManager.getCurrentMode());
+      console.log('使用真实数据模式');
       
       try {
         console.log('步骤 1: 建立连接');
-        await dataService.connect(currentConnection);
+        const isConnected = await dataService.connect(currentConnection);
+        
+        if (!isConnected) {
+          throw new Error('连接建立失败，请检查连接配置和网络状态');
+        }
         
         console.log('步骤 2: 获取数据库列表');
         const dbList = await dataService.getDatabases();
@@ -131,13 +134,11 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
         
         // 提供更详细的错误诊断信息
         const errorMessage = error instanceof Error ? error.message : '未知错误';
-        const currentMode = dataModeManager.getCurrentMode();
+        const currentMode = 'real';
         
         let errorDescription = `无法连接到数据库服务器。错误: ${errorMessage}`;
         
-        if (currentMode === 'demo') {
-          errorDescription += '\n\n当前处于演示模式，请检查数据服务配置。';
-        } else {
+        {
           errorDescription += '\n\n当前处于真实数据模式，请检查：';
           errorDescription += '\n1. InfluxDB 服务器是否正在运行';
           errorDescription += '\n2. 连接配置是否正确（URL、端口、认证信息）';

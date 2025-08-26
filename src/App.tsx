@@ -10,7 +10,6 @@ import RightSidebar from './components/RightSidebar';
 import { InfluxDBConnection } from './types/influxdb';
 import { connectionStorage } from './services/connectionStorage';
 import { connectionManager } from './services/connectionManager';
-import { dataModeManager } from './services/dataModeManager';
 import { dataService } from './services/dataService';
 
 function App() {
@@ -27,15 +26,6 @@ function App() {
     averageResponseTime: 0
   });
   
-  // 监听数据模式变化，重新加载连接
-  useEffect(() => {
-    const unsubscribe = dataModeManager.addModeListener(() => {
-      console.log('🔄 数据模式变化，重新加载连接列表');
-      loadConnections();
-    });
-
-    return unsubscribe;
-  }, []);
 
   // 从持久化存储加载连接
   useEffect(() => {
@@ -149,26 +139,38 @@ function App() {
   // 连接创建或更新成功
   const handleConnectionCreated = async (connection: InfluxDBConnection) => {
     try {
+      console.log('💾 保存连接配置:', connection.name);
+      
       await connectionStorage.storeConnection(connection);
       await loadConnections(); // 重新加载连接列表
       setShowConnectionForm(false);
-      setCurrentConnection(connection);
       
-      // 添加到连接管理器
-      await connectionManager.addConnection(connection, {
-        autoReconnect: true,
-        maxReconnectAttempts: 3,
-        reconnectInterval: 3000,
-        connectionTimeout: 10000,
-        healthCheckInterval: 30000
-      });
+      // 使用 dataService 建立连接
+      const isConnected = await dataService.connect(connection);
       
-      // 添加连接状态监听器
-      connectionManager.addConnectionListener(connection.id, (conn, status) => {
-        handleConnectionStatusChange(conn, status);
-      });
-      
-      message.success(editingConnection ? '连接更新成功' : '连接创建并连接成功');
+      if (isConnected) {
+        setCurrentConnection(connection);
+        console.log('✅ 连接创建并连接成功:', connection.name);
+        
+        // 添加到连接管理器
+        await connectionManager.addConnection(connection, {
+          autoReconnect: true,
+          maxReconnectAttempts: 3,
+          reconnectInterval: 3000,
+          connectionTimeout: 10000,
+          healthCheckInterval: 30000
+        });
+        
+        // 添加连接状态监听器
+        connectionManager.addConnectionListener(connection.id, (conn, status) => {
+          handleConnectionStatusChange(conn, status);
+        });
+        
+        message.success(editingConnection ? '连接更新成功' : '连接创建并连接成功');
+      } else {
+        message.error('连接配置保存成功，但连接测试失败');
+        console.error('❌ 连接测试失败:', connection.name);
+      }
     } catch (error) {
       console.error('保存连接失败:', error);
       message.error(editingConnection ? '更新连接失败' : '保存连接失败');
@@ -179,8 +181,24 @@ function App() {
 
   // 选择连接
   const handleSelectConnection = async (connection: InfluxDBConnection) => {
-    setCurrentConnection(connection);
-    message.success(`已连接到: ${connection.name}`);
+    try {
+      console.log('🔗 开始建立连接:', connection.name);
+      
+      // 使用 dataService 建立连接
+      const isConnected = await dataService.connect(connection);
+      
+      if (isConnected) {
+        setCurrentConnection(connection);
+        message.success(`已连接到: ${connection.name}`);
+        console.log('✅ 连接建立成功:', connection.name);
+      } else {
+        message.error(`连接失败: ${connection.name}`);
+        console.error('❌ 连接建立失败:', connection.name);
+      }
+    } catch (error) {
+      console.error('❌ 连接过程出错:', error);
+      message.error(`连接出错: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
   };
 
   // 删除连接
@@ -195,6 +213,8 @@ function App() {
       
       if (currentConnection?.id === connectionId) {
         setCurrentConnection(null);
+        // 断开 dataService 中的连接
+        await dataService.disconnect();
       }
       
       message.success('连接已删除');

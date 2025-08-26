@@ -136,24 +136,10 @@ body {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-/* 演示模式特殊效果 */
-.data-mode-section.demo-mode {
-  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(255, 193, 7, 0.05));
-  border-radius: 8px;
-}
-
-.data-mode-section.demo-mode::before {
-  background: linear-gradient(90deg, transparent, rgba(255, 193, 7, 0.3), transparent);
-}
-
-/* 真实数据模式特殊效果 */
-.data-mode-section.real-mode {
+/* 数据模式效果 */
+.data-mode-section {
   background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(129, 199, 132, 0.05));
   border-radius: 8px;
-}
-
-.data-mode-section.real-mode::before {
-  background: linear-gradient(90deg, transparent, rgba(76, 175, 80, 0.3), transparent);
 }
 
 /* 主内容容器 - 水平布局 */
