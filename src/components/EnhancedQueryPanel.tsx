@@ -134,7 +134,6 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
         
         // 提供更详细的错误诊断信息
         const errorMessage = error instanceof Error ? error.message : '未知错误';
-        const currentMode = 'real';
         
         let errorDescription = `无法连接到数据库服务器。错误: ${errorMessage}`;
         

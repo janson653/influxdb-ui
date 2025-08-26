@@ -19,6 +19,7 @@ pub fn run() {
             connection_store::store_connection,
             connection_store::load_connections,
             connection_store::delete_connection,
+            connection_store::update_connection,
             connection_store::test_connection_with_auth,
             connection_store::test_connection,
             database_operations::get_databases,
@@ -26,6 +27,7 @@ pub fn run() {
             database_operations::get_tag_keys,
             database_operations::get_field_keys,
             database_operations::get_measurement_info,
+            database_operations::execute_query,
             database_operations::execute_query_optimized
         ])
         .run(tauri::generate_context!())

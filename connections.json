@@ -1,0 +1,11 @@
+[
+  {
+    "id": "test-123",
+    "name": "Test Connection",
+    "url": "http://localhost:8086",
+    "username": "admin",
+    "password": "admin123",
+    "database": "testdb",
+    "is_encrypted": true
+  }
+]

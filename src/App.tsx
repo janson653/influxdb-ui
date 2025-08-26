@@ -115,10 +115,23 @@ function App() {
   const loadConnections = async () => {
     try {
       setLoading(true);
+      console.log('📖 开始加载连接列表...');
+      
       const loaded = await connectionStorage.loadConnections();
+      console.log('📖 加载到的连接列表:', {
+        count: loaded.length,
+        connections: loaded.map(conn => ({
+          id: conn.id,
+          name: conn.name,
+          url: conn.url,
+          database: conn.database
+        }))
+      });
+      
       setConnections(loaded);
+      console.log('✅ 连接列表已更新到状态');
     } catch (error) {
-      console.error('加载连接失败:', error);
+      console.error('❌ 加载连接失败:', error);
     } finally {
       setLoading(false);
     }
@@ -140,9 +153,20 @@ function App() {
   const handleConnectionCreated = async (connection: InfluxDBConnection) => {
     try {
       console.log('💾 保存连接配置:', connection.name);
+      console.log('📋 连接详情:', {
+        id: connection.id,
+        name: connection.name,
+        url: connection.url,
+        database: connection.database,
+        hasAuth: !!(connection.username && connection.password)
+      });
       
       await connectionStorage.storeConnection(connection);
+      console.log('✅ 连接配置已保存到后端');
+      
       await loadConnections(); // 重新加载连接列表
+      console.log('🔄 连接列表已重新加载');
+      
       setShowConnectionForm(false);
       
       // 使用 dataService 建立连接

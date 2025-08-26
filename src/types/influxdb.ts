@@ -10,6 +10,17 @@ export interface InfluxDBConnection {
   error?: string;
 }
 
+// 连接配置 (与后端 Rust 结构体对应)
+export interface ConnectionConfig {
+  id: string;
+  name: string;
+  url: string;
+  username?: string;
+  password?: string;
+  database: string;
+  is_encrypted: boolean;
+}
+
 // 数据库信息
 export interface Database {
   name: string;
