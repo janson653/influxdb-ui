@@ -105,9 +105,14 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
         
         setDatabases(dbList);
         
-        // 如果只有一个数据库，自动选中
-        if (dbList.length === 1) {
-          console.log('只有一个数据库，自动选中:', dbList[0]);
+        // 数据库选择逻辑优化
+        if (dbList.length === 0) {
+          // 没有数据库，清空选择
+          console.log('📊 没有数据库，清空选择');
+          setTabs(tabs.map(tab => ({ ...tab, selectedDatabase: '', measurements: [] })));
+        } else if (dbList.length === 1) {
+          // 只有一个数据库，自动选中
+          console.log('📊 只有一个数据库，自动选中:', dbList[0]);
           const updatedTabs = tabs.map(tab => ({
             ...tab,
             selectedDatabase: dbList[0],
@@ -115,9 +120,16 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
           setTabs(updatedTabs);
           // 自动加载测量列表
           await loadMeasurementsForTab(tabs[0].key, dbList[0]);
-        } else if (dbList.length === 0) {
-          // 没有数据库，清空选择
-          setTabs(tabs.map(tab => ({ ...tab, selectedDatabase: '', measurements: [] })));
+        } else {
+          // 多个数据库，默认选择第一个
+          console.log('📊 多个数据库可用，默认选择第一个:', dbList[0]);
+          const updatedTabs = tabs.map(tab => ({
+            ...tab,
+            selectedDatabase: dbList[0],
+          }));
+          setTabs(updatedTabs);
+          // 自动加载第一个数据库的测量列表
+          await loadMeasurementsForTab(tabs[0].key, dbList[0]);
         }
         
         console.log('✅ 数据库列表加载完成');
@@ -160,6 +172,24 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
     fetchDatabases();
   }, [currentConnection]);
 
+  // 监听数据库列表变化，确保状态同步
+  useEffect(() => {
+    console.log('📊 数据库列表变化监听:', {
+      databases,
+      currentTabs: tabs.map(tab => ({ key: tab.key, selectedDatabase: tab.selectedDatabase })),
+      timestamp: new Date().toISOString()
+    });
+    
+    // 如果数据库列表为空，确保所有标签页的选择状态都被清空
+    if (databases.length === 0) {
+      const needsUpdate = tabs.some(tab => tab.selectedDatabase);
+      if (needsUpdate) {
+        console.log('📊 数据库列表为空，清空所有选择');
+        setTabs(tabs.map(tab => ({ ...tab, selectedDatabase: '', measurements: [] })));
+      }
+    }
+  }, [databases]);
+
   const handleTabChange = (key: string) => {
     setActiveKey(key);
   };
@@ -195,10 +225,24 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
   };
 
   const updateTabState = (key: string, newState: Partial<TabInfo>) => {
-    console.log('🔄 更新标签页状态:', { key, newState });
-    setTabs(tabs.map(tab => 
+    console.log('🔄 更新标签页状态:', { 
+      key, 
+      newState, 
+      currentState: tabs.find(tab => tab.key === key),
+      timestamp: new Date().toISOString()
+    });
+    
+    const updatedTabs = tabs.map(tab => 
       tab.key === key ? { ...tab, ...newState } : tab
-    ));
+    );
+    
+    console.log('🔄 更新后的标签页状态:', {
+      key,
+      updatedState: updatedTabs.find(tab => tab.key === key),
+      allTabs: updatedTabs.map(tab => ({ key: tab.key, selectedDatabase: tab.selectedDatabase }))
+    });
+    
+    setTabs(updatedTabs);
   };
 
   const executeQuery = async (tabKey: string) => {
@@ -393,12 +437,37 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
 
   // 加载测量列表 - 在数据库选择变化时加载
   const loadMeasurementsForTab = async (tabKey: string, database: string) => {
-    if (!database) return;
+    if (!database) {
+      console.log('📊 数据库名称为空，跳过加载测量列表');
+      return;
+    }
+    
+    console.log('📊 开始加载测量列表:', {
+      tabKey,
+      database,
+      timestamp: new Date().toISOString()
+    });
+    
     try {
       const measurementList = await dataService.getMeasurements(database);
+      console.log('📊 测量列表加载成功:', {
+        tabKey,
+        database,
+        measurementCount: measurementList.length,
+        measurements: measurementList
+      });
+      
       updateTabState(tabKey, { measurements: measurementList });
     } catch (error) {
-      // 静默失败，不显示错误
+      console.error('📊 测量列表加载失败:', {
+        tabKey,
+        database,
+        error: error instanceof Error ? error.message : '未知错误',
+        timestamp: new Date().toISOString()
+      });
+      
+      // 静默失败，不显示错误，但清空测量列表
+      updateTabState(tabKey, { measurements: [] });
     }
   };
 
@@ -507,11 +576,15 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
                   <div className="toolbar-right">
                     <Select
                       placeholder="选择数据库"
-                      value={tab.selectedDatabase || null}
+                      value={tab.selectedDatabase || undefined}
                       onChange={async (value) => {
                         console.log('📊 数据库选择变更:', value);
-                        updateTabState(tab.key, { selectedDatabase: value });
-                        await loadMeasurementsForTab(tab.key, value);
+                        const selectedValue = value || '';
+                        console.log('📊 处理后的选择值:', selectedValue);
+                        updateTabState(tab.key, { selectedDatabase: selectedValue });
+                        if (selectedValue) {
+                          await loadMeasurementsForTab(tab.key, selectedValue);
+                        }
                       }}
                       style={{ minWidth: 120 }}
                       loading={!databases.length}
