@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Tabs, 
   Button, 
@@ -52,6 +52,7 @@ interface TabInfo {
   executionTime?: number;
   rowCount?: number;
   error?: string;
+  isUserSelected?: boolean; // 标记是否为用户手动选择
 }
 
 const queryTemplates = [
@@ -74,8 +75,20 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
     measurements: [],
     queryResult: null,
     loading: false,
+    isUserSelected: false,
   }]);
-
+  
+  // 使用 refs 来获取最新的状态，避免闭包问题
+  const tabsRef = useRef<TabInfo[]>(tabs);
+  const databasesRef = useRef<string[]>(databases);
+  
+  // 同步 refs 和 state
+  useEffect(() => {
+    tabsRef.current = tabs;
+    databasesRef.current = databases;
+  }, [tabs, databases]);
+  
+  
   // 加载数据库列表
   useEffect(() => {
     const fetchDatabases = async () => {
@@ -103,33 +116,63 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
         const dbList = await dataService.getDatabases();
         console.log('获取到数据库列表:', dbList);
         
-        setDatabases(dbList);
+        // 验证数据库列表格式
+        if (!Array.isArray(dbList)) {
+          throw new Error(`数据库列表格式错误，期望数组但收到 ${typeof dbList}`);
+        }
+        
+        // 过滤和清理数据库名称
+        const cleanDbList = dbList
+          .filter(db => typeof db === 'string' && db.trim() !== '')
+          .map(db => db.trim());
+        
+        console.log('清理后的数据库列表:', cleanDbList);
+        setDatabases(cleanDbList);
         
         // 数据库选择逻辑优化
-        if (dbList.length === 0) {
+        if (cleanDbList.length === 0) {
           // 没有数据库，清空选择
           console.log('📊 没有数据库，清空选择');
-          setTabs(tabs.map(tab => ({ ...tab, selectedDatabase: '', measurements: [] })));
-        } else if (dbList.length === 1) {
-          // 只有一个数据库，自动选中
-          console.log('📊 只有一个数据库，自动选中:', dbList[0]);
-          const updatedTabs = tabs.map(tab => ({
-            ...tab,
-            selectedDatabase: dbList[0],
-          }));
+          setTabs(tabs.map(tab => ({ 
+            ...tab, 
+            selectedDatabase: '', 
+            measurements: [],
+            isUserSelected: false 
+          })));
+        } else if (cleanDbList.length === 1) {
+          // 只有一个数据库，自动选中（但不要覆盖用户手动选择）
+          console.log('📊 只有一个数据库，自动选中:', cleanDbList[0]);
+          const updatedTabs = tabs.map(tab => {
+            // 如果用户已经手动选择，不要覆盖
+            if (tab.isUserSelected) {
+              return tab;
+            }
+            return {
+              ...tab,
+              selectedDatabase: cleanDbList[0],
+              isUserSelected: false
+            };
+          });
           setTabs(updatedTabs);
           // 自动加载测量列表
-          await loadMeasurementsForTab(tabs[0].key, dbList[0]);
+          await loadMeasurementsForTab(tabs[0].key, cleanDbList[0]);
         } else {
-          // 多个数据库，默认选择第一个
-          console.log('📊 多个数据库可用，默认选择第一个:', dbList[0]);
-          const updatedTabs = tabs.map(tab => ({
-            ...tab,
-            selectedDatabase: dbList[0],
-          }));
+          // 多个数据库，默认选择第一个（但不要覆盖用户手动选择）
+          console.log('📊 多个数据库可用，默认选择第一个:', cleanDbList[0]);
+          const updatedTabs = tabs.map(tab => {
+            // 如果用户已经手动选择，不要覆盖
+            if (tab.isUserSelected) {
+              return tab;
+            }
+            return {
+              ...tab,
+              selectedDatabase: cleanDbList[0],
+              isUserSelected: false
+            };
+          });
           setTabs(updatedTabs);
           // 自动加载第一个数据库的测量列表
-          await loadMeasurementsForTab(tabs[0].key, dbList[0]);
+          await loadMeasurementsForTab(tabs[0].key, cleanDbList[0]);
         }
         
         console.log('✅ 数据库列表加载完成');
@@ -176,7 +219,11 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
   useEffect(() => {
     console.log('📊 数据库列表变化监听:', {
       databases,
-      currentTabs: tabs.map(tab => ({ key: tab.key, selectedDatabase: tab.selectedDatabase })),
+      currentTabs: tabs.map(tab => ({ 
+        key: tab.key, 
+        selectedDatabase: tab.selectedDatabase,
+        isUserSelected: tab.isUserSelected 
+      })),
       timestamp: new Date().toISOString()
     });
     
@@ -185,10 +232,79 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
       const needsUpdate = tabs.some(tab => tab.selectedDatabase);
       if (needsUpdate) {
         console.log('📊 数据库列表为空，清空所有选择');
-        setTabs(tabs.map(tab => ({ ...tab, selectedDatabase: '', measurements: [] })));
+        setTabs(tabs.map(tab => ({ 
+          ...tab, 
+          selectedDatabase: '', 
+          measurements: [],
+          isUserSelected: false 
+        })));
+      }
+    } else {
+      // 如果数据库列表不为空，检查当前选择的数据库是否仍然有效
+      const needsUpdate = tabs.some(tab => 
+        tab.selectedDatabase && !databases.includes(tab.selectedDatabase)
+      );
+      if (needsUpdate) {
+        console.log('📊 检测到无效的数据库选择，重置为有效值');
+        const updatedTabs = tabs.map(tab => {
+          // 如果用户手动选择的数据库仍然有效，不要重置
+          if (tab.isUserSelected && databases.includes(tab.selectedDatabase)) {
+            return tab;
+          }
+          if (tab.selectedDatabase && !databases.includes(tab.selectedDatabase)) {
+            return { 
+              ...tab, 
+              selectedDatabase: databases[0], // 重置为第一个可用数据库
+              measurements: [],
+              isUserSelected: false // 重置用户选择状态
+            };
+          }
+          return tab;
+        });
+        setTabs(updatedTabs);
+        
+        // 如果当前标签页的数据库被重置，加载新的测量值
+        const currentTab = tabs.find(tab => tab.key === activeKey);
+        if (currentTab && currentTab.selectedDatabase && !databases.includes(currentTab.selectedDatabase)) {
+          loadMeasurementsForTab(activeKey, databases[0]);
+        }
       }
     }
   }, [databases]);
+
+  // 状态验证和同步 useEffect
+  useEffect(() => {
+    // 验证所有标签页的数据库状态
+    const invalidTabs = tabs.filter(tab => 
+      tab.selectedDatabase && !databases.includes(tab.selectedDatabase)
+    );
+    
+    if (invalidTabs.length > 0) {
+      console.log('🔍 发现无效的数据库选择，正在修复:', {
+        invalidTabs: invalidTabs.map(tab => ({
+          key: tab.key,
+          selectedDatabase: tab.selectedDatabase,
+          isUserSelected: tab.isUserSelected
+        })),
+        availableDatabases: databases
+      });
+      
+      // 修复无效的数据库选择
+      const updatedTabs = tabs.map(tab => {
+        if (tab.selectedDatabase && !databases.includes(tab.selectedDatabase)) {
+          return {
+            ...tab,
+            selectedDatabase: databases.length > 0 ? databases[0] : '',
+            isUserSelected: false,
+            measurements: []
+          };
+        }
+        return tab;
+      });
+      
+      setTabs(updatedTabs);
+    }
+  }, [databases, tabs]);
 
   const handleTabChange = (key: string) => {
     setActiveKey(key);
@@ -204,6 +320,7 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
       measurements: [],
       queryResult: null,
       loading: false,
+      isUserSelected: false,
     }]);
     setActiveKey(newKey);
   };
@@ -232,55 +349,129 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
       timestamp: new Date().toISOString()
     });
     
-    const updatedTabs = tabs.map(tab => 
-      tab.key === key ? { ...tab, ...newState } : tab
-    );
-    
-    console.log('🔄 更新后的标签页状态:', {
-      key,
-      updatedState: updatedTabs.find(tab => tab.key === key),
-      allTabs: updatedTabs.map(tab => ({ key: tab.key, selectedDatabase: tab.selectedDatabase }))
+    // 使用函数式更新确保获取最新状态
+    setTabs(prevTabs => {
+      const updatedTabs = prevTabs.map(tab => 
+        tab.key === key ? { ...tab, ...newState } : tab
+      );
+      
+      console.log('🔄 更新后的标签页状态:', {
+        key,
+        updatedState: updatedTabs.find(tab => tab.key === key),
+        allTabs: updatedTabs.map(tab => ({ key: tab.key, selectedDatabase: tab.selectedDatabase }))
+      });
+      
+      return updatedTabs;
     });
     
-    setTabs(updatedTabs);
+    // 返回预期的更新状态（注意：由于异步性，这可能不是最终状态）
+    const expectedUpdatedTab = { ...tabs.find(tab => tab.key === key), ...newState };
+    return expectedUpdatedTab;
+  };
+
+  // 优化的状态更新函数，确保状态同步
+  const updateTabStateSync = (key: string, newState: Partial<TabInfo>): TabInfo | null => {
+    console.log('🔄 [同步] 更新标签页状态:', { 
+      key, 
+      newState, 
+      currentState: tabs.find(tab => tab.key === key),
+      timestamp: new Date().toISOString()
+    });
+    
+    // 立即创建更新后的状态对象
+    const currentTab = tabs.find(tab => tab.key === key);
+    if (!currentTab) {
+      console.warn('🔄 [同步] 未找到标签页:', key);
+      return null;
+    }
+    
+    const updatedTab = { ...currentTab, ...newState };
+    
+    // 使用函数式更新确保获取最新状态
+    setTabs(prevTabs => {
+      const newTabs = prevTabs.map(tab => 
+        tab.key === key ? { ...tab, ...newState } : tab
+      );
+      console.log('🔄 [同步] 函数式更新完成:', {
+        key,
+        updatedState: newTabs.find(tab => tab.key === key),
+        allTabs: newTabs.map(tab => ({ key: tab.key, selectedDatabase: tab.selectedDatabase }))
+      });
+      return newTabs;
+    });
+    
+    console.log('🔄 [同步] 返回更新后的状态:', {
+      key,
+      updatedTab,
+      selectedDatabase: updatedTab.selectedDatabase
+    });
+    
+    return updatedTab;
   };
 
   const executeQuery = async (tabKey: string) => {
-    const tab = tabs.find(t => t.key === tabKey);
+    // 使用 useRef 获取最新的 tabs 状态，避免闭包问题
+    const currentTab = tabsRef.current.find((t: TabInfo) => t.key === tabKey);
     console.log('🔍 执行查询检查:', {
       tabKey,
-      tab: tab ? { selectedDatabase: tab.selectedDatabase, query: tab.query } : '未找到标签页'
+      tab: currentTab ? { 
+        selectedDatabase: currentTab.selectedDatabase, 
+        query: currentTab.query,
+        isUserSelected: currentTab.isUserSelected 
+      } : '未找到标签页'
     });
     
-    if (!tab) {
+    if (!currentTab) {
       console.log('❌ 未找到查询标签页');
       message.error('查询标签页不存在');
       return;
     }
     
-    if (!tab.selectedDatabase || tab.selectedDatabase.trim() === '') {
-      console.log('❌ 未选择数据库:', tab.selectedDatabase);
+    // 更严格的状态验证
+    const selectedDatabase = currentTab.selectedDatabase?.trim();
+    if (!selectedDatabase) {
+      console.log('❌ 未选择数据库:', {
+        selectedDatabase: currentTab.selectedDatabase,
+        isUserSelected: currentTab.isUserSelected,
+        availableDatabases: databasesRef.current
+      });
       message.error('请先选择数据库');
       return;
     }
 
-    if (!tab.query.trim()) {
+    // 验证选择的数据库是否在可用列表中
+    if (!databasesRef.current.includes(selectedDatabase)) {
+      console.log('❌ 选择的数据库不在可用列表中:', {
+        selectedDatabase,
+        availableDatabases: databasesRef.current
+      });
+      message.error('选择的数据库不可用，请重新选择');
+      return;
+    }
+
+    if (!currentTab.query.trim()) {
       console.log('❌ 查询语句为空');
       message.error('请输入查询语句');
       return;
     }
 
+    console.log('✅ 数据库验证通过:', {
+      selectedDatabase,
+      isUserSelected: currentTab.isUserSelected,
+      availableDatabases: databases
+    });
+
     console.group('🔍 执行查询');
     console.log('查询标签:', tabKey);
-    console.log('数据库:', tab.selectedDatabase);
-    console.log('查询语句:', tab.query);
+    console.log('数据库:', selectedDatabase);
+    console.log('查询语句:', currentTab.query);
 
     const startTime = Date.now();
     updateTabState(tabKey, { loading: true, error: undefined });
 
     try {
       console.log('发送查询请求...');
-      const result = await dataService.executeQuery(tab.query, tab.selectedDatabase);
+      const result = await dataService.executeQuery(currentTab.query, selectedDatabase);
       const executionTime = Date.now() - startTime;
       
       console.log('查询响应:', result);
@@ -457,7 +648,14 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
         measurements: measurementList
       });
       
-      updateTabState(tabKey, { measurements: measurementList });
+      // 使用函数式更新确保只更新 measurements 字段，不覆盖其他状态
+      setTabs(prevTabs => 
+        prevTabs.map(tab => 
+          tab.key === tabKey 
+            ? { ...tab, measurements: measurementList }
+            : tab
+        )
+      );
     } catch (error) {
       console.error('📊 测量列表加载失败:', {
         tabKey,
@@ -467,7 +665,13 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
       });
       
       // 静默失败，不显示错误，但清空测量列表
-      updateTabState(tabKey, { measurements: [] });
+      setTabs(prevTabs => 
+        prevTabs.map(tab => 
+          tab.key === tabKey 
+            ? { ...tab, measurements: [] }
+            : tab
+        )
+      );
     }
   };
 
@@ -576,21 +780,43 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
                   <div className="toolbar-right">
                     <Select
                       placeholder="选择数据库"
-                      value={tab.selectedDatabase || undefined}
+                      value={tab.selectedDatabase}
                       onChange={async (value) => {
                         console.log('📊 数据库选择变更:', value);
                         const selectedValue = value || '';
                         console.log('📊 处理后的选择值:', selectedValue);
-                        updateTabState(tab.key, { selectedDatabase: selectedValue });
+                        console.log('📊 当前数据库列表:', databases);
+                        console.log('📊 选择值是否在数据库列表中:', databases.includes(selectedValue));
+                        
+                        // 验证选择的数据库是否在可用列表中
+                        if (selectedValue && !databases.includes(selectedValue)) {
+                          console.warn('📊 选择的数据库不在可用列表中:', selectedValue);
+                          message.warning('选择的数据库不可用，请重新选择');
+                          return;
+                        }
+                        
+                        // 使用同步状态更新确保状态立即生效
+                        const updatedTab = updateTabStateSync(tab.key, { 
+                          selectedDatabase: selectedValue,
+                          isUserSelected: true 
+                        });
+                        
+                        console.log('📊 数据库选择状态已更新:', {
+                          tabKey: tab.key,
+                          selectedDatabase: updatedTab?.selectedDatabase,
+                          isUserSelected: updatedTab?.isUserSelected
+                        });
+                        
                         if (selectedValue) {
                           await loadMeasurementsForTab(tab.key, selectedValue);
                         }
                       }}
                       style={{ minWidth: 120 }}
                       loading={!databases.length}
+                      disabled={!databases.length}
                     >
                       {databases.map(db => (
-                        <Option key={db} value={db}>
+                        <Option key={db} value={db} label={db}>
                           <DatabaseOutlined /> {db}
                         </Option>
                       ))}
@@ -607,7 +833,7 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
                       disabled={!tab.selectedDatabase}
                     >
                       {tab.measurements.map(m => (
-                        <Option key={m} value={m}>
+                        <Option key={m} value={m} label={m}>
                           <TableOutlined /> {m}
                         </Option>
                       ))}
@@ -721,7 +947,7 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
           )}
 
           {/* 查询结果面板 */}
-          <div className="bottom-panel" style={{ marginTop: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div className="bottom-panel" style={{ marginTop: 16 }}>
             {/* 结果标签页 */}
             <div className="result-tabs">
               <div className={`result-tab ${!tab.error ? 'active' : ''}`}>
@@ -733,7 +959,7 @@ const EnhancedQueryPanel: React.FC<EnhancedQueryPanelProps> = ({ currentConnecti
             </div>
             
             {/* 结果内容 */}
-            <div className="results-container" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div className="results-container">
               {tab.error ? (
                 // 错误信息显示
                 <div style={{ padding: '20px', backgroundColor: '#fff2f0', borderRadius: '4px', margin: '16px' }}>
