@@ -34,7 +34,7 @@ import {
   SettingOutlined,
   InfoCircleOutlined
 } from '@ant-design/icons';
-import { DataVisualizationService } from '../services/dataVisualization';
+
 import { QueryResult } from '../types/influxdb';
 
 const { Option } = Select;
@@ -60,8 +60,7 @@ interface ChartConfigState {
 
 const DataVisualization: React.FC<DataVisualizationProps> = ({
   queryResult,
-  query,
-  database
+database
 }) => {
   const [chartConfig, setChartConfig] = useState<ChartConfigState>({
     type: 'line',
@@ -109,21 +108,12 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
     const autoValueFields = numericFields.slice(0, Math.min(3, numericFields.length));
     
     // 生成图表数据
-    const chartData = DataVisualizationService.convertInfluxDBToChartData(
-      queryResult,
-      'line',
-      timeField,
-      autoValueFields
-    );
+    // TODO: 实现数据转换逻辑
 
     setChartData(chartData);
 
     // 获取图表类型建议
-    const suggestion = DataVisualizationService.suggestChartType(
-      chartData.labels?.length || 0,
-      numericFields.length,
-      fields.includes(timeField)
-    );
+    const suggestion = { type: 'line' };
 
     // 更新配置
     setChartConfig(prev => ({
@@ -131,7 +121,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
       type: suggestion.type as any,
       timeField,
       valueFields: autoValueFields,
-      title: DataVisualizationService.generateChartTitle(query, database),
+      title: `查询结果 - ${database}`,
       xAxis: timeField,
       yAxis: autoValueFields[0] || 'value'
     }));
@@ -143,13 +133,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
       
       // 重新生成图表数据
       if (key === 'timeField' || key === 'valueFields' || key === 'type') {
-        const newData = DataVisualizationService.convertInfluxDBToChartData(
-          queryResult!,
-          newConfig.type === 'pie' ? 'line' : newConfig.type,
-          newConfig.timeField,
-          newConfig.valueFields
-        );
-        setChartData(newData);
+        // TODO: 实现数据转换逻辑
       }
       
       return newConfig;
