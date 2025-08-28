@@ -169,32 +169,21 @@ function App() {
       
       setShowConnectionForm(false);
       
-      // 使用 dataService 建立连接
-      const isConnected = await dataService.connect(connection);
+      // 添加到连接管理器（用于后续监控）
+      await connectionManager.addConnection(connection, {
+        autoReconnect: true,
+        maxReconnectAttempts: 3,
+        reconnectInterval: 3000,
+        connectionTimeout: 10000,
+        healthCheckInterval: 30000
+      });
       
-      if (isConnected) {
-        setCurrentConnection(connection);
-        console.log('✅ 连接创建并连接成功:', connection.name);
-        
-        // 添加到连接管理器
-        await connectionManager.addConnection(connection, {
-          autoReconnect: true,
-          maxReconnectAttempts: 3,
-          reconnectInterval: 3000,
-          connectionTimeout: 10000,
-          healthCheckInterval: 30000
-        });
-        
-        // 添加连接状态监听器
-        connectionManager.addConnectionListener(connection.id, (conn, status) => {
-          handleConnectionStatusChange(conn, status);
-        });
-        
-        message.success(editingConnection ? '连接更新成功' : '连接创建并连接成功');
-      } else {
-        message.error('连接配置保存成功，但连接测试失败');
-        console.error('❌ 连接测试失败:', connection.name);
-      }
+      // 添加连接状态监听器
+      connectionManager.addConnectionListener(connection.id, (conn, status) => {
+        handleConnectionStatusChange(conn, status);
+      });
+      
+      console.log('✅ 连接配置保存成功:', connection.name);
     } catch (error) {
       console.error('保存连接失败:', error);
       message.error(editingConnection ? '更新连接失败' : '保存连接失败');

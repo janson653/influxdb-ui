@@ -12,7 +12,8 @@ interface ConnectionFormProps {
 
 const ConnectionForm: React.FC<ConnectionFormProps> = ({ editingConnection, onConnectionCreated, onCancel }) => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [useAuth, setUseAuth] = useState(true);
 
   // 当编辑连接时，设置表单初始值
@@ -32,8 +33,47 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ editingConnection, onCo
     }
   }, [editingConnection, form]);
 
-  const handleSubmit = async (values: any) => {
-    setLoading(true);
+  // 测试连接
+  const handleTestConnection = async () => {
+    try {
+      await form.validateFields();
+      const values = form.getFieldsValue();
+      
+      setTesting(true);
+      
+      const connection: InfluxDBConnection = {
+        id: editingConnection?.id || Date.now().toString(),
+        name: values.name,
+        url: values.url,
+        username: useAuth ? values.username : undefined,
+        password: useAuth ? values.password : undefined,
+        database: values.database,
+        status: 'disconnected'
+      };
+
+      const isConnected = await dataService.testConnection(connection);
+      
+      if (isConnected) {
+        message.success('连接测试成功！');
+      } else {
+        message.error('连接测试失败，请检查服务器地址、认证信息和数据库名称');
+      }
+    } catch (error) {
+      if (error instanceof Error && 'errorFields' in error) {
+        message.error('请先完善表单信息');
+      } else {
+        const errorMessage = error instanceof Error ? error.message : '连接测试失败';
+        message.error(`连接测试失败: ${errorMessage}`);
+        console.error('连接测试错误:', error);
+      }
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  // 保存连接
+  const handleSaveConnection = async (values: any) => {
+    setSaving(true);
     try {
       const connection: InfluxDBConnection = {
         id: editingConnection?.id || Date.now().toString(),
@@ -45,24 +85,14 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ editingConnection, onCo
         status: 'disconnected'
       };
 
-      // 测试连接
-      const isConnected = await dataService.testConnection(connection);
-      
-      if (isConnected) {
-        connection.status = 'connected';
-        message.success(editingConnection ? '连接更新成功！' : '连接创建成功！');
-        onConnectionCreated(connection);
-      } else {
-        connection.status = 'error';
-        connection.error = '连接失败，请检查配置';
-        message.error('连接失败，请检查服务器地址、认证信息和数据库名称');
-      }
+      message.success(editingConnection ? '连接更新成功！' : '连接保存成功！');
+      onConnectionCreated(connection);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '连接测试失败';
-      message.error(`连接测试失败: ${errorMessage}`);
-      console.error('连接错误:', error);
+      const errorMessage = error instanceof Error ? error.message : '保存失败';
+      message.error(`保存失败: ${errorMessage}`);
+      console.error('保存错误:', error);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -71,12 +101,12 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ editingConnection, onCo
       <Form
         form={form}
         layout="vertical"
-        onFinish={handleSubmit}
+        onFinish={handleSaveConnection}
         initialValues={{
           url: 'http://localhost:8086',
           database: 'testdb',
           username: 'admin',
-          password: 'password'
+          password: 'admin123'
         }}
       >
         <Form.Item
@@ -136,8 +166,21 @@ const ConnectionForm: React.FC<ConnectionFormProps> = ({ editingConnection, onCo
         )}
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading} style={{ marginRight: 8 }}>
-            {editingConnection ? '更新连接' : '测试并保存'}
+          <Button 
+            type="primary" 
+            htmlType="submit" 
+            loading={saving} 
+            style={{ marginRight: 8 }}
+          >
+            {editingConnection ? '更新连接' : '保存连接'}
+          </Button>
+          <Button 
+            type="default" 
+            loading={testing} 
+            onClick={handleTestConnection}
+            style={{ marginRight: 8 }}
+          >
+            测试连接
           </Button>
           <Button onClick={onCancel}>取消</Button>
         </Form.Item>

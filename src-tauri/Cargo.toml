@@ -25,4 +25,5 @@ serde_json = "1"
 influxdb = { version = "0.6", features = ["derive", "serde"] }
 tokio = { version = "1", features = ["full"] }
 chrono = { version = "0.4", features = ["serde"] }
+dirs = "5"
 

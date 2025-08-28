@@ -15,26 +15,29 @@ pub struct ConnectionConfig {
 }
 
 fn get_storage_path() -> std::path::PathBuf {
-    let mut path = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::new());
-    
-    // 更健壮的路径解析
-    if path.ends_with("src-tauri") {
-        path.pop();
-    } else if path.ends_with("target/debug") {
-        path.pop(); // target
-        path.pop(); // src-tauri
-        path.pop(); // 项目根目录
-    } else if path.ends_with("target/release") {
-        path.pop(); // target
-        path.pop(); // src-tauri
-        path.pop(); // 项目根目录
-    }
+    // 使用用户配置目录，而不是相对路径
+    let mut path = match dirs::config_dir() {
+        Some(mut config_dir) => {
+            config_dir.push("influxdb-ui");
+            // 确保配置目录存在
+            if let Err(e) = std::fs::create_dir_all(&config_dir) {
+                println!("⚠️ [Backend] 创建配置目录失败: {:?}", e);
+                // 如果创建失败，使用当前目录作为备选
+                std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::new())
+            } else {
+                config_dir
+            }
+        }
+        None => {
+            println!("⚠️ [Backend] 无法获取用户配置目录，使用当前目录");
+            std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::new())
+        }
+    };
     
     path.push("connections.json");
     
     // 添加详细日志
-    println!("📁 [Backend] 计算得到的配置文件路径: {:?}", path);
-    println!("📁 [Backend] 当前工作目录: {:?}", std::env::current_dir());
+    println!("📁 [Backend] 配置文件路径: {:?}", path);
     
     path
 }
@@ -93,8 +96,8 @@ pub async fn load_connections() -> Result<Vec<ConnectionConfig>, String> {
     
     // 检查文件是否存在
     if !path.exists() {
-        println!("❌ [Backend] 配置文件不存在: {:?}", path);
-        return Err(format!("配置文件不存在: {:?}", path));
+        println!("ℹ️ [Backend] 配置文件不存在，返回空连接列表: {:?}", path);
+        return Ok(Vec::new());
     }
     
     // 检查文件权限

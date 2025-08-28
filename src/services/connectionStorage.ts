@@ -9,13 +9,13 @@ class ConnectionStorage {
         id: connection.id,
         name: connection.name,
         url: connection.url,
-        username: connection.username,
-        password: connection.password,
+        username: connection.username || null,
+        password: connection.password || null,
         database: connection.database,
         is_encrypted: true,
       };
 
-      await this.invokeRustCommand('store_connection', config);
+      await this.invokeRustCommand('store_connection', { config });
     } catch (error) {
       console.error('存储连接失败:', error);
       throw error;
@@ -69,13 +69,13 @@ class ConnectionStorage {
         id: connection.id,
         name: connection.name,
         url: connection.url,
-        username: connection.username,
-        password: connection.password,
+        username: connection.username || null,
+        password: connection.password || null,
         database: connection.database,
         is_encrypted: true,
       };
 
-      await this.invokeRustCommand('update_connection', config);
+      await this.invokeRustCommand('update_connection', { config });
     } catch (error) {
       console.error('更新连接失败:', error);
       throw error;
