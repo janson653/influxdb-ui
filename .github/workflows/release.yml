@@ -1,0 +1,121 @@
+name: Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CI: true
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate tag matches package version
+        run: |
+          node <<'EOF'
+          const fs = require('node:fs');
+
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          const tag = (process.env.GITHUB_REF_NAME || '').replace(/^v/, '');
+
+          if (pkg.version !== tag) {
+            console.error(`Tag ${process.env.GITHUB_REF_NAME} does not match package.json version ${pkg.version}`);
+            process.exit(1);
+          }
+
+          console.log(`Release version validated: ${pkg.version}`);
+          EOF
+
+      - name: Create draft GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          generate_release_notes: true
+
+  build:
+    name: Build ${{ matrix.platform.name }}
+    needs: prepare
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - name: Linux
+            os: ubuntu-latest
+            build_args: --linux AppImage deb
+            release_files: |
+              release/*.AppImage
+              release/*.deb
+          - name: macOS
+            os: macos-latest
+            build_args: --mac dmg
+            release_files: |
+              release/*.dmg
+          - name: Windows
+            os: windows-latest
+            build_args: --win nsis
+            release_files: |
+              release/*.exe
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web bundle
+        run: pnpm build
+
+      - name: Compile Electron main process
+        run: pnpm electron:compile
+
+      - name: Package release artifacts
+        run: pnpm exec electron-builder ${{ matrix.platform.build_args }} --publish never
+
+      - name: Upload assets to draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: ${{ matrix.platform.release_files }}
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: false

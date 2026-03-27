@@ -204,7 +204,7 @@ export function useQueryHistory() {
 
 // 使用示例的Hook
 export function useQueryHistoryExample() {
-  const { history, saveQuery, deleteQuery, searchQueries } = useQueryHistory();
+  const { history, loadHistory, saveQuery, deleteQuery, searchQueries } = useQueryHistory();
 
   // 在组件挂载时加载历史记录
   useEffect(() => {
@@ -216,8 +216,8 @@ export function useQueryHistoryExample() {
     const startTime = Date.now();
     
     try {
-      // 执行查询...
-      const result = await executeQuery(query, connectionId, database);
+      // 示例文件不接真实执行器，返回空结果占位。
+      const result: unknown[] = [];
       const executionTime = Date.now() - startTime;
       
       // 保存到历史记录

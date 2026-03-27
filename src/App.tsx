@@ -224,48 +224,50 @@ function App() {
         </div>
       </div>
 
-      {/* 左侧边栏 - 连接管理 */}
-      <div className="sidebar">
-        <ConnectionTree
-          connections={connections}
-          currentConnection={currentConnection}
-          onSelectConnection={handleSelectConnection}
-          onDeleteConnection={handleDeleteConnection}
-          onNewConnection={handleNewConnection}
-          onMeasurementSelect={setSelectedMeasurement}
-          loading={loading}
-        />
-      </div>
-
-      {/* 主内容区 - 查询面板 */}
-      <div className="main-content">
-        {currentConnection ? (
-          <QueryPanel 
-            currentConnection={currentConnection} 
+      <div className="workspace">
+        {/* 左侧边栏 - 连接管理 */}
+        <div className="sidebar">
+          <ConnectionTree
+            connections={connections}
+            currentConnection={currentConnection}
+            onSelectConnection={handleSelectConnection}
+            onDeleteConnection={handleDeleteConnection}
+            onNewConnection={handleNewConnection}
+            onMeasurementSelect={setSelectedMeasurement}
+            loading={loading}
           />
-        ) : (
-          <div className="query-panel">
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
-              height: '100%',
-              flexDirection: 'column',
-              color: '#666',
-              backgroundColor: '#ffffff'
-            }}>
-              <DatabaseOutlined style={{ fontSize: 64, marginBottom: 16 }} />
-              <h2>欢迎使用 InfluxDB UI</h2>
-              <p>请先选择一个连接或创建新连接开始使用</p>
-              {loading && <span>正在加载连接...</span>}
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
 
-      {/* 右侧边栏 - 详情 */}
-      <div className="right-sidebar">
-        <RightSidebar selectedMeasurement={selectedMeasurement} />
+        {/* 主内容区 - 查询面板 */}
+        <div className="main-content">
+          {currentConnection ? (
+            <QueryPanel 
+              currentConnection={currentConnection} 
+            />
+          ) : (
+            <div className="query-panel">
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                alignItems: 'center', 
+                height: '100%',
+                flexDirection: 'column',
+                color: '#666',
+                backgroundColor: '#ffffff'
+              }}>
+                <DatabaseOutlined style={{ fontSize: 64, marginBottom: 16 }} />
+                <h2>欢迎使用 InfluxDB UI</h2>
+                <p>请先选择一个连接或创建新连接开始使用</p>
+                {loading && <span>正在加载连接...</span>}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 右侧边栏 - 详情 */}
+        <div className="right-sidebar">
+          <RightSidebar selectedMeasurement={selectedMeasurement} />
+        </div>
       </div>
 
       {/* 新建连接弹窗 */}

@@ -51,6 +51,18 @@ const ConnectionTree: React.FC<ConnectionTreeProps> = ({
     setConnectionNodes(nodes);
   }, [connections, currentConnection]);
 
+  // 当前连接切换后，主动拉起数据库列表，避免展开态下停留在空节点。
+  useEffect(() => {
+    if (!currentConnection) {
+      return;
+    }
+
+    const currentNode = connectionNodes.find(node => node.connection.id === currentConnection.id);
+    if (currentNode && currentNode.expanded && currentNode.databases.length === 0 && !currentNode.loading) {
+      void loadDatabasesForConnection(currentConnection.id);
+    }
+  }, [connectionNodes, currentConnection]);
+
   // 切换连接展开状态
   const toggleConnection = async (connectionId: string) => {
     setConnectionNodes(prev => 

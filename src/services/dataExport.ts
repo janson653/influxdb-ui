@@ -74,9 +74,9 @@ export class DataExportService {
   /**
    * 导出为CSV格式
    */
-  private static exportToCSV(data: ExportData, options: { includeHeader: boolean }): string {
+  private static exportToCSV(exportData: ExportData, options: { includeHeader: boolean }): string {
     const { includeHeader } = options;
-    const { columns, data } = data;
+    const { columns, data } = exportData;
 
     const rows: string[] = [];
 
@@ -102,8 +102,8 @@ export class DataExportService {
   /**
    * 导出为JSON格式
    */
-  private static exportToJSON(data: ExportData): string {
-    const { columns, data } = data;
+  private static exportToJSON(exportData: ExportData): string {
+    const { columns, data } = exportData;
     
     // 格式化数据，添加更友好的结构
     const formattedData = data.map(row => {
@@ -134,11 +134,11 @@ export class DataExportService {
    * 导出为Excel格式
    */
   private static async exportToExcel(
-    data: ExportData, 
+    exportData: ExportData, 
     options: { sheetName: string; includeHeader: boolean; dateColumns: string[] }
   ): Promise<Blob> {
     const { sheetName, includeHeader, dateColumns } = options;
-    const { columns, data } = data;
+    const { columns, data } = exportData;
 
     // 准备工作表数据
     const worksheetData: any[][] = [];

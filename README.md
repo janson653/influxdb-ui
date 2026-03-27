@@ -1,111 +1,128 @@
 # InfluxDB UI
 
-一个基于 Tauri + React + TypeScript 的 InfluxDB 1.0 图形化界面工具。
+一个基于 Electron + React + TypeScript 的 InfluxDB 1.x 桌面客户端。
 
-## 功能特性
+## 当前状态
 
-### 1. 连接管理
-- **新建连接**：支持配置 InfluxDB 1.0 服务器连接
-- **连接测试**：自动测试连接配置是否正确
-- **连接列表**：管理多个 InfluxDB 连接
-- **连接状态**：实时显示连接状态（已连接/未连接/错误）
-
-### 2. 数据库查询
-- **数据库选择**：自动获取并选择数据库
-- **Measurement 浏览**：查看数据库中的所有 measurements
-- **InfluxQL 查询**：支持完整的 InfluxQL 查询语言
-- **查询结果展示**：以表格形式展示查询结果
-- **分页支持**：支持大量数据的分页显示
+- 桌面运行时已从 Tauri 迁移到 Electron
+- 连接持久化、InfluxDB `/ping` 与 `/query` 已迁到 Electron 主进程
+- 浏览器模式仍保留 localStorage/mock fallback 以便前端开发
+- 当前 `pnpm build`、`pnpm electron:build` 和 Linux 打包链路已打通
 
 ## 技术栈
 
-- **前端框架**：React 18 + TypeScript
-- **UI 组件库**：Ant Design 5.x
-- **桌面应用框架**：Tauri 2.x
-- **HTTP 客户端**：Axios
-- **构建工具**：Vite
+- React 18
+- TypeScript
+- Ant Design 5
+- Vite 6
+- Electron 41
 
 ## 开发环境
 
 ### 前置要求
-- Node.js 18+
+
+- Node.js 20+
 - pnpm
-- Rust (用于 Tauri)
 
 ### 安装依赖
+
 ```bash
 pnpm install
 ```
 
-### 开发模式
+### 浏览器开发模式
+
 ```bash
 pnpm dev
 ```
 
-### 构建应用
+说明:
+- 启动 Vite dev server，使用浏览器 fallback
+- 适合纯前端样式和交互开发
+
+### Electron 开发模式
+
+```bash
+pnpm electron:dev
+```
+
+说明:
+- 启动 Electron 主进程、preload 和 Vite dev server
+- 用于验证主进程持久化和 InfluxDB HTTP 调用链路
+
+### 编译 Electron 主进程
+
+```bash
+pnpm electron:compile
+```
+
+## 构建
+
 ```bash
 pnpm build
-pnpm tauri build
+pnpm electron:build
 ```
 
-## 使用说明
+说明:
+- `pnpm build` 会生成前端产物到 `dist/`
+- `pnpm electron:build` 会继续编译 Electron 主进程，并在 `release/` 目录生成当前平台安装包
 
-### 1. 新建连接
-1. 点击左侧边栏的"新建连接"按钮
-2. 填写连接信息：
-   - **连接名称**：给连接起一个易识别的名称
-   - **服务器地址**：InfluxDB 服务器地址（默认：http://localhost:8086）
-   - **数据库名称**：要连接的数据库名称
-   - **认证信息**：如果需要认证，启用并填写用户名和密码
-3. 点击"测试并保存"按钮
+## GitHub Actions 发布
 
-### 2. 查询数据库
-1. 选择一个已建立的连接
-2. 在查询面板中选择目标数据库
-3. 选择要查询的 measurement（可选）
-4. 在查询编辑器中输入 InfluxQL 查询语句
-5. 点击"执行查询"按钮
+仓库已提供 `.github/workflows/release.yml`，用于在 GitHub 上自动发布桌面安装包。
 
-### 示例查询
-```sql
--- 查询最近的 CPU 数据
-SELECT * FROM "cpu" LIMIT 10
+触发方式:
 
--- 查询特定时间范围的数据
-SELECT * FROM "cpu" WHERE time > now() - 1h
+1. 确保 `package.json` 的 `version` 已更新到目标版本。
+2. 创建并推送同版本 tag，例如：
 
--- 聚合查询
-SELECT mean("value") FROM "cpu" GROUP BY time(5m)
+```bash
+git tag v0.1.0
+git push origin v0.1.0
 ```
 
-## 项目结构
+3. GitHub Actions 会自动执行以下流程：
+   - 先校验 tag 和 `package.json` 版本是否一致
+   - 创建一个 draft GitHub Release
+   - 并行构建三个平台安装包
+   - 全部成功后把 draft Release 发布为正式 Release
 
-```
+当前产物目标:
+- Windows: NSIS `.exe`
+- macOS: `.dmg`
+- Linux: `.AppImage` 和 `.deb`
+
+说明:
+- 当前流程使用仓库自带的 `GITHUB_TOKEN`，不需要额外上传发布 token
+- workflow 已声明 `contents: write` 权限，用于创建 Release 和上传产物
+- 当前流程不包含 Windows 代码签名和 macOS notarization，生成的是 unsigned 安装包
+- 如果任一平台失败，Release 会保留为 draft，便于排查和重跑
+
+## 目录结构
+
+```text
 src/
-├── components/          # React 组件
-│   ├── ConnectionForm.tsx    # 连接表单
-│   ├── ConnectionList.tsx    # 连接列表
-│   └── QueryPanel.tsx       # 查询面板
-├── services/           # 服务层
-│   └── influxdb.ts    # InfluxDB API 服务
-├── types/             # TypeScript 类型定义
-│   └── influxdb.ts    # InfluxDB 相关类型
-├── App.tsx            # 主应用组件
-└── main.tsx           # 应用入口
+  components/      React UI
+  services/        前端服务层与浏览器 fallback
+  types/           TypeScript 类型
+electron/
+  assets/          Electron 运行时图标资源
+  main.ts          主进程入口
+  preload.ts       受限 preload API
+  connectionStore.ts
+  influxHttp.ts
+dist-electron/     Electron TypeScript 编译产物
 ```
 
-## 支持的 InfluxDB 版本
+## 支持范围
 
-当前版本专门支持 **InfluxDB 1.0**，包括：
-- InfluxQL 查询语言
-- 用户名/密码认证
-- 数据库和 measurement 浏览
-- 标准 InfluxDB 1.0 API 端点
+- InfluxDB 1.x
+- 连接管理
+- 数据库与 measurement 浏览
+- InfluxQL 查询
+- Electron 主进程持久化
 
-## 开发计划
+## 已知问题
 
-- [ ] 支持 InfluxDB 2.x
-- [ ] 数据可视化功能
-- [ ] 查询历史记录
-- [ ] 导出功能
-- [ ] 批量操作支持
+- 若本机没有图形环境，`pnpm electron:dev` 会出现 DBus/dconf 噪音日志，但不影响启动链路 smoke test
+- 当前 GitHub Release 流程未接入代码签名和 macOS notarization

@@ -15,7 +15,7 @@ class ConnectionStorage {
         is_encrypted: true,
       };
 
-      await this.invokeRustCommand('store_connection', config);
+      await this.invokeBackend('store_connection', config);
     } catch (error) {
       console.error('存储连接失败:', error);
       throw error;
@@ -25,7 +25,7 @@ class ConnectionStorage {
   // 加载所有连接
   async loadConnections(): Promise<InfluxDBConnection[]> {
     try {
-      const configs: any[] = await this.invokeRustCommand('load_connections', {});
+      const configs: any[] = await this.invokeBackend('load_connections');
       
       return configs.map(config => ({
         id: config.id,
@@ -45,7 +45,7 @@ class ConnectionStorage {
   // 删除连接
   async deleteConnection(connectionId: string): Promise<void> {
     try {
-      await this.invokeRustCommand('delete_connection', { connection_id: connectionId });
+      await this.invokeBackend('delete_connection', { connection_id: connectionId });
     } catch (error) {
       console.error('删除连接失败:', error);
       throw error;
@@ -68,15 +68,15 @@ class ConnectionStorage {
     });
 
     try {
-      console.log('调用 Rust 命令: test_connection_with_auth');
-      const result = await this.invokeRustCommand('test_connection_with_auth', {
+      console.log('调用后端命令: test_connection_with_auth');
+      const result = await this.invokeBackend('test_connection_with_auth', {
         url,
         database,
         username,
         password,
       });
       
-      console.log('Rust 连接测试结果:', result ? '✅ 成功' : '❌ 失败');
+      console.log('后端连接测试结果:', result ? '✅ 成功' : '❌ 失败');
       console.groupEnd();
       return result;
     } catch (error) {
@@ -109,8 +109,8 @@ class ConnectionStorage {
     });
 
     try {
-      console.log('调用 Rust 命令: query_data');
-      const result = await this.invokeRustCommand('query_data', {
+      console.log('调用后端命令: query_data');
+      const result = await this.invokeBackend('query_data', {
         query_string: query,
         influxdb_url: url,
         influxdb_database: database,
@@ -118,7 +118,7 @@ class ConnectionStorage {
         password,
       });
       
-      console.log('Rust 查询执行成功');
+      console.log('后端查询执行成功');
       console.groupEnd();
       return result;
     } catch (error) {
@@ -128,22 +128,46 @@ class ConnectionStorage {
     }
   }
 
-  // 工具方法：调用Rust命令
-  private async invokeRustCommand(command: string, payload: any): Promise<any> {
-    console.group('🚀 调用 Rust 命令');
+  private hasElectronAPI(): boolean {
+    return typeof window !== 'undefined' && typeof window.electronAPI !== 'undefined';
+  }
+
+  private async invokeElectron(command: string, payload?: any): Promise<any> {
+    if (!window.electronAPI) {
+      throw new Error('Electron API not available');
+    }
+
+    switch (command) {
+      case 'load_connections':
+        return window.electronAPI.connections.load();
+      case 'store_connection':
+        return window.electronAPI.connections.store(payload);
+      case 'delete_connection':
+        return window.electronAPI.connections.deleteConnection(payload.connection_id);
+      case 'test_connection_with_auth':
+        return window.electronAPI.influx.testConnection(payload);
+      case 'query_data':
+        return window.electronAPI.influx.queryData(payload);
+      default:
+        throw new Error(`Unsupported Electron command: ${command}`);
+    }
+  }
+
+  // 工具方法：调用 Electron typed API 或浏览器 fallback
+  private async invokeBackend(command: string, payload?: any): Promise<any> {
+    console.group('🚀 调用后端命令');
     console.log('命令:', command);
     console.log('参数:', JSON.stringify(payload, null, 2));
 
-    if (typeof window !== 'undefined' && (window as any).__TAURI_IPC__) {
+    if (this.hasElectronAPI()) {
       try {
-        console.log('检测到 Tauri 环境，使用 invoke 调用 Rust');
-        const { invoke } = await import('@tauri-apps/api/core');
-        const result = await invoke(command, payload);
-        console.log('✅ Rust 命令执行成功，返回结果:', result);
+        console.log('检测到 Electron 环境，使用 preload 暴露的 typed API');
+        const result = await this.invokeElectron(command, payload);
+        console.log('✅ Electron 命令执行成功，返回结果:', result);
         console.groupEnd();
         return result;
       } catch (error) {
-        console.error('❌ Rust 命令执行失败:', error);
+        console.error('❌ Electron 命令执行失败:', error);
         console.error('错误详情:', {
           message: error instanceof Error ? error.message : '未知错误',
           stack: error instanceof Error ? error.stack : undefined,
@@ -153,7 +177,7 @@ class ConnectionStorage {
         throw error;
       }
     } else {
-      console.log('⚠️ 未检测到 Tauri 环境，使用开发模式');
+      console.log('⚠️ 未检测到 Electron 环境，使用浏览器 fallback');
       // 开发模式下使用本地存储 - 简化版本保持兼容性
       if (command === 'load_connections') {
         const stored = localStorage.getItem('influxdb_connections');
@@ -273,9 +297,9 @@ class ConnectionStorage {
         }
       }
     }
-    console.error('❌ TAURI API not available');
+    console.error('❌ Backend API not available');
     console.groupEnd();
-    throw new Error('TAURI API not available');
+    throw new Error('Backend API not available');
   }
 }
 

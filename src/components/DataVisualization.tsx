@@ -8,7 +8,7 @@ import {
   Col, 
   Radio, 
   message,
-  Tooltip,
+  Tooltip as AntdTooltip,
   Badge
 } from 'antd';
 import {
@@ -21,7 +21,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
   Area,
@@ -64,8 +64,7 @@ interface ChartConfigState {
 const DataVisualization: React.FC<DataVisualizationProps> = ({
   queryResult,
   query,
-  database,
-  onExport
+  database
 }) => {
   const [chartConfig, setChartConfig] = useState<ChartConfigState>({
     type: 'line',
@@ -147,9 +146,14 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
       
       // 重新生成图表数据
       if (key === 'timeField' || key === 'valueFields' || key === 'type') {
+        const chartType = newConfig.type === 'area'
+          ? 'line'
+          : newConfig.type === 'pie'
+            ? 'bar'
+            : newConfig.type;
         const newData = DataVisualizationService.convertInfluxDBToChartData(
           queryResult!,
-          newConfig.type === 'area' ? 'line' : newConfig.type,
+          chartType,
           newConfig.timeField,
           newConfig.valueFields
         );
@@ -196,7 +200,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
               {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <RechartsTooltip />
               {chartConfig.showLegend && <Legend />}
               {chartData.datasets.map((dataset: any, index: number) => (
                 <Line
@@ -220,7 +224,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
               {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <RechartsTooltip />
               {chartConfig.showLegend && <Legend />}
               {chartData.datasets.map((dataset: any, index: number) => (
                 <Bar
@@ -241,7 +245,7 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
               {chartConfig.showGrid && <CartesianGrid strokeDasharray="3 3" />}
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <RechartsTooltip />
               {chartConfig.showLegend && <Legend />}
               {chartData.datasets.map((dataset: any, index: number) => (
                 <Area
@@ -274,13 +278,13 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
                 outerRadius={120}
                 fill="#8884d8"
                 dataKey="value"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                label={({ name, percent }) => `${name}: ${(((percent ?? 0) * 100)).toFixed(1)}%`}
               >
-                {chartData.labels.map((_, index) => (
+                {chartData.labels.map((_: string, index: number) => (
                   <Cell key={`cell-${index}`} fill={chartData.datasets[0]?.backgroundColor?.[index] || '#8884d8'} />
                 ))}
               </Pie>
-              <Tooltip />
+              <RechartsTooltip />
               {chartConfig.showLegend && <Legend />}
             </PieChart>
           </ResponsiveContainer>
@@ -306,21 +310,21 @@ const DataVisualization: React.FC<DataVisualizationProps> = ({
             </Col>
             <Col>
               <Space>
-                <Tooltip title="图表配置">
+                <AntdTooltip title="图表配置">
                   <Button
                     icon={<SettingOutlined />}
                     onClick={() => setShowConfig(!showConfig)}
                     type="text"
                 />
-                </Tooltip>
-                <Tooltip title="导出图表">
+                </AntdTooltip>
+                <AntdTooltip title="导出图表">
                   <Button
                     icon={<DownloadOutlined />}
                     onClick={() => {
                       message.info('图表导出功能开发中');
                     }}
                   />
-                </Tooltip>
+                </AntdTooltip>
               </Space>
             </Col>
           </Row>

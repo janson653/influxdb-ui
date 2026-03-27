@@ -148,8 +148,10 @@ export class DataVisualizationService {
       };
     }
 
+    const chartType = config.type === 'area' || config.type === 'scatter' ? 'line' : config.type;
+
     return {
-      type: config.type,
+      type: chartType,
       data,
       options: chartOptions
     };
@@ -214,14 +216,14 @@ export class DataVisualizationService {
         }
 
         // 处理每个数值字段
-        valueFields.forEach((field, fieldIndex) => {
-          const fieldIndex = series.columns.indexOf(field);
-          if (fieldIndex !== -1 && typeof row[fieldIndex] === 'number') {
+        valueFields.forEach((field) => {
+          const columnIndex = series.columns.indexOf(field);
+          if (columnIndex !== -1 && typeof row[columnIndex] === 'number') {
             const datasetKey = `${seriesName} - ${field}`;
             if (!allDataPoints[datasetKey]) {
               allDataPoints[datasetKey] = [];
             }
-            allDataPoints[datasetKey].push(row[fieldIndex]);
+            allDataPoints[datasetKey].push(row[columnIndex]);
           }
         });
       });
